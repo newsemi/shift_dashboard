@@ -276,6 +276,7 @@
       '2026-05-01':'노동절','2026-05-05':'어린이날',
       '2026-05-24':'부처님오신날','2026-05-25':'대체공휴일(부처님오신날)',
       '2026-06-03':'전국동시지방선거','2026-06-06':'현충일',
+      '2026-07-17':'제헌절',
       '2026-08-15':'광복절','2026-08-17':'대체공휴일(광복절)',
       '2026-09-24':'추석 연휴','2026-09-25':'추석','2026-09-26':'추석 연휴',
       '2026-10-03':'개천절','2026-10-05':'대체공휴일(개천절)',
@@ -611,6 +612,14 @@
     try {
       const loaded=JSON.parse(await file.text());
       if(!loaded.schedule || !loaded.leaves) throw new Error('형식이 올바르지 않습니다.');
+      // 구버전 백업에 새 설정 항목이 없어도 기본값을 채워 호환성을 유지합니다.
+      loaded.holidayDates = Array.isArray(loaded.holidayDates) ? loaded.holidayDates : [];
+      loaded.holidayExclusions = Array.isArray(loaded.holidayExclusions) ? loaded.holidayExclusions : [];
+      loaded.officialHolidayCache = loaded.officialHolidayCache && typeof loaded.officialHolidayCache === 'object' ? loaded.officialHolidayCache : {};
+      loaded.officialHolidayFetchedAt = loaded.officialHolidayFetchedAt && typeof loaded.officialHolidayFetchedAt === 'object' ? loaded.officialHolidayFetchedAt : {};
+      loaded.overrides = loaded.overrides && typeof loaded.overrides === 'object' ? loaded.overrides : {};
+      loaded.hourlyRate = Number(loaded.hourlyRate || 0);
+      loaded.taxRate = Number.isFinite(Number(loaded.taxRate)) ? Number(loaded.taxRate) : 10;
       data=loaded; saveData(); alert('백업 데이터를 불러왔습니다.');
     } catch(err) { alert('불러오기 실패: '+err.message); }
     e.target.value='';
@@ -768,9 +777,10 @@
     localStorage.setItem(KEY,JSON.stringify(data));
     renderPersonalTools();
   });
-  document.getElementById('addHoliday').addEventListener('click',()=>{
+  document.getElementById('addHoliday').addEventListener('click',async()=>{
     const key=document.getElementById('holidayDate').value;
     if(!key){alert('공휴일 날짜를 선택해주세요.');return;}
+    await loadOfficialHolidays(Number(key.slice(0,4)));
     data.holidayExclusions = data.holidayExclusions.filter(x=>x!==key);
     if(!Object.prototype.hasOwnProperty.call(officialHolidayMap(Number(key.slice(0,4))),key) && !data.holidayDates.includes(key)) {
       data.holidayDates.push(key);
@@ -778,9 +788,10 @@
     localStorage.setItem(KEY,JSON.stringify(data));
     renderPersonalTools();
   });
-  document.getElementById('removeHoliday').addEventListener('click',()=>{
+  document.getElementById('removeHoliday').addEventListener('click',async()=>{
     const key=document.getElementById('holidayDate').value;
     if(!key){alert('공휴일 날짜를 선택해주세요.');return;}
+    await loadOfficialHolidays(Number(key.slice(0,4)));
     data.holidayDates=data.holidayDates.filter(x=>x!==key);
     if(Object.prototype.hasOwnProperty.call(officialHolidayMap(Number(key.slice(0,4))),key) && !data.holidayExclusions.includes(key)) {
       data.holidayExclusions.push(key);
