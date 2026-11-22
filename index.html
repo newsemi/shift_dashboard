@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.98</title>
+<title>근무현황판 v1.99</title>
 <style>
   :root {
     color-scheme: dark;
@@ -232,7 +232,7 @@
       <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.98 · 공휴일 표시 강화</div>
+  <div class="footer">SHIFT DASHBOARD · v1.99 · 공휴일 표시 강화</div>
 </main>
 
 <dialog id="shiftDialog">
@@ -360,7 +360,7 @@
         saved.officialHolidayCache = saved.officialHolidayCache && typeof saved.officialHolidayCache === 'object' ? saved.officialHolidayCache : {};
         saved.officialHolidayFetchedAt = saved.officialHolidayFetchedAt && typeof saved.officialHolidayFetchedAt === 'object' ? saved.officialHolidayFetchedAt : {};
         saved.overrides = saved.overrides && typeof saved.overrides === 'object' ? saved.overrides : {};
-        // 기존 버전의 저장 데이터에는 v1.98 급여 설정 기본값을 보충합니다.
+        // 기존 버전의 저장 데이터에는 v1.99 급여 설정 기본값을 보충합니다.
         saved.baseSalary = Number.isFinite(Number(saved.baseSalary)) ? Number(saved.baseSalary) : 2172000;
         saved.fixedOvertimePay = Number.isFinite(Number(saved.fixedOvertimePay)) ? Number(saved.fixedOvertimePay) : 728000;
         saved.hourlyRate = Number.isFinite(Number(saved.hourlyRate)) && Number(saved.hourlyRate)>0 ? Number(saved.hourlyRate) : 11549;
@@ -748,7 +748,11 @@
       before = findShiftPerson(key,'오후');
       const next = new Date(date);
       next.setDate(next.getDate()+1);
-      after = findShiftPerson(dateKey(next.getFullYear(),next.getMonth(),next.getDate()),'오전');
+      const nextKey = dateKey(next.getFullYear(),next.getMonth(),next.getDate());
+
+      // 다음 날 연차로 오전자가 맞교대 편성으로 전환될 수 있습니다.
+      // 맞교대 주간자를 우선 찾고, 없으면 일반 오전자를 뒷근무자로 표시합니다.
+      after = findExactShiftPerson(nextKey,'맞교대 주간') || findShiftPerson(nextKey,'오전');
     }
 
     return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + '.';
