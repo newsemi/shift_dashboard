@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.7</title>
+<title>근무현황판 v1.8</title>
 <style>
   :root {
     color-scheme: dark;
@@ -72,10 +72,16 @@
   .personal-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   .journal { white-space:pre-wrap; background:#10192b; border:1px solid var(--line); border-radius:9px; padding:12px; font:13px/1.85 ui-monospace,SFMono-Regular,monospace; min-height:130px; }
   .share-calendar { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; }
-  .share-day { min-height:55px; padding:6px 2px; text-align:center; border:1px solid var(--line); border-radius:8px; background:#10192b; }
-  .share-day small { display:block; color:var(--muted); font-size:10px; }
-  .share-day strong { display:block; font-size:17px; margin-top:4px; }
-  .share-day .share-shift { display:block; font-size:10px; color:var(--muted); margin-top:2px; }
+  .share-day { min-height:82px; padding:8px 3px; text-align:center; border:1px solid var(--line); border-radius:9px; background:#10192b; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .share-day small { display:block; color:#d4def0; font-size:13px; font-weight:700; }
+  .share-day strong { display:block; font-size:23px; line-height:1.1; margin-top:1px; }
+  .share-day .share-shift { display:block; font-size:12px; line-height:1.2; color:#e7edfa; font-weight:700; margin-top:1px; }
+  .share-day.is-off { background:#4b1824; border-color:#a83c50; }
+  .share-day.is-off small, .share-day.is-off strong, .share-day.is-off .share-shift { color:#ff9aaa; }
+  .share-day.is-leave { background:#651b31; border:2px solid #ff526f; }
+  .share-day.is-leave small, .share-day.is-leave strong, .share-day.is-leave .share-shift { color:#ffd2da; }
+  .share-day.is-match { border-color:#b48bff; background:#30214b; }
+  .share-day.is-match .share-shift { color:#d8c3ff; }
   .pay-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:12px; }
   .pay-result { padding:12px; background:#10192b; border:1px solid var(--line); border-radius:9px; }
   .pay-result small { display:block; color:var(--muted); margin-bottom:5px; }
@@ -85,7 +91,10 @@
   @media(max-width:680px) {
     .personal-grid { grid-template-columns:1fr; }
     .pay-grid { grid-template-columns:1fr 1fr; }
-    .share-day { min-height:49px; }
+    .share-day { min-height:68px; padding:6px 1px; }
+    .share-day small { font-size:12px; }
+    .share-day strong { font-size:20px; }
+    .share-day .share-shift { font-size:11px; }
   }
 
   @media(max-width:680px) {
@@ -219,7 +228,7 @@
       <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.7 · 개인 일지 · 급여 예상 · 공유</div>
+  <div class="footer">SHIFT DASHBOARD · v1.8 · 공유 달력 가독성 개선</div>
 </main>
 
 <dialog id="shiftDialog">
@@ -638,6 +647,9 @@
       const value = effectiveShift(key,'오세영') || '미입력';
       const cell = document.createElement('div');
       cell.className = 'share-day';
+      if (value === '휴무') cell.classList.add('is-off');
+      if (value === '연차') cell.classList.add('is-leave');
+      if (value === '맞교대 주간' || value === '맞교대 야간') cell.classList.add('is-match');
       const day = document.createElement('small'); day.textContent = d+'일';
       const icon = document.createElement('strong'); icon.textContent = ownShiftIcon(value);
       const shift = document.createElement('span'); shift.className = 'share-shift'; shift.textContent = value;
