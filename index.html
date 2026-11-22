@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.2</title>
+<title>근무현황판 v1.3</title>
 <style>
   :root {
     color-scheme: dark;
@@ -61,6 +61,12 @@
   .warning { color:#ffd48b; }
   .primary { background:#315a9f; border-color:#4777c5; }
   .danger { color:#ffb3c8; }
+  dialog { width:min(92vw,360px); border:1px solid var(--line); border-radius:14px; padding:18px; color:var(--text); background:var(--panel); }
+  dialog::backdrop { background:rgba(0,0,0,.68); }
+  dialog h2 { margin:0 0 14px; }
+  dialog .dialog-info { color:var(--muted); font-size:13px; margin-bottom:12px; }
+  dialog select { width:100%; padding:12px; font-size:16px; }
+  dialog .dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
   .footer { text-align:center; color:#71809b; font-size:11px; padding:8px 0 24px; }
   @media(max-width:680px) {
     body { padding:14px 10px; }
@@ -129,8 +135,32 @@
       <p class="hint">입력한 근무와 연차는 이 기기의 사파리 브라우저에 자동 저장됩니다. 다른 기기에서는 백업 파일을 옮겨 불러오세요. 앱 데이터 삭제 전에는 반드시 백업 파일을 저장하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.2 · 개인 기기 저장 방식</div>
+  <div class="footer">SHIFT DASHBOARD · v1.3 · 개인 기기 저장 방식</div>
 </main>
+
+<dialog id="shiftDialog">
+  <h2>근무 변경</h2>
+  <div class="dialog-info" id="shiftDialogInfo"></div>
+  <label for="shiftChoice">근무 선택</label>
+  <select id="shiftChoice">
+    <option value="">미입력</option>
+    <optgroup label="오전 근무">
+      <option>오전1</option><option>오전2</option><option>오전3</option><option>오전4</option><option>오전5</option>
+    </optgroup>
+    <optgroup label="오후 근무">
+      <option>오후1</option><option>오후2</option><option>오후3</option><option>오후4</option><option>오후5</option>
+    </optgroup>
+    <optgroup label="야간 근무">
+      <option>야간1</option><option>야간2</option><option>야간3</option><option>야간4</option><option>야간5</option>
+    </optgroup>
+    <option value="휴무">휴무</option>
+    <option value="연차">연차</option>
+  </select>
+  <div class="dialog-actions">
+    <button type="button" id="cancelShift">취소</button>
+    <button type="button" class="primary" id="saveShift">적용</button>
+  </div>
+</dialog>
 
 <script>
   // 직원 이름과 화면 표시 순서
@@ -220,19 +250,48 @@
       '<div class="stat"><small>등록 연차</small><strong>'+leaveCount+'건</strong></div>'+
       '<div class="stat"><small>1일 기준 입력</small><strong>'+known+' / 4명</strong></div>';
   }
+  let editingShift = null;
   function editShift(key,person) {
-    const current = data.schedule[key]?.[person] || '미입력';
-    const answer = prompt(person+' · '+key+'\n근무를 입력하세요.\n예: 오전1, 오후3, 야간2, 휴무',current);
-    if (answer === null) return;
-    const value = answer.trim();
-    if (!value) {
-      if (data.schedule[key]) delete data.schedule[key][person];
-    } else {
-      if (!data.schedule[key]) data.schedule[key] = {};
-      data.schedule[key][person] = value;
-    }
-    saveData();
+    editingShift = {key,person};
+    const current = effectiveShift(key,person);
+    document.getElementById('shiftDialogInfo').textContent = person + ' · ' + key;
+    document.getElementById('shiftChoice').value = current === '연차' ? '연차' : current;
+    document.getElementById('shiftDialog').showModal();
   }
+  function removeLeaveMark(key,person) {
+    if (!data.leaves[key]) return;
+    data.leaves[key] = data.leaves[key].filter(p => p !== person);
+    if (!data.leaves[key].length) delete data.leaves[key];
+  }
+  document.getElementById('cancelShift').addEventListener('click',()=>{
+    document.getElementById('shiftDialog').close();
+    editingShift = null;
+  });
+  document.getElementById('saveShift').addEventListener('click',()=>{
+    if (!editingShift) return;
+    const {key,person} = editingShift;
+    const value = document.getElementById('shiftChoice').value;
+
+    // 연차는 별도 연차 기록에 저장해 원래 근무를 보존합니다.
+    if (value === '연차') {
+      if (!data.leaves[key]) data.leaves[key] = [];
+      if (!data.leaves[key].includes(person)) data.leaves[key].push(person);
+    } else {
+      removeLeaveMark(key,person);
+      if (!value) {
+        if (data.schedule[key]) {
+          delete data.schedule[key][person];
+          if (!Object.keys(data.schedule[key]).length) delete data.schedule[key];
+        }
+      } else {
+        if (!data.schedule[key]) data.schedule[key] = {};
+        data.schedule[key][person] = value;
+      }
+    }
+    document.getElementById('shiftDialog').close();
+    editingShift = null;
+    saveData();
+  });
   document.getElementById('prevMonth').addEventListener('click',()=>{
     viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} render();
   });
