@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#111827">
+<title>근무현황판</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:#0b1020; --panel:#151d30; --panel2:#1b2740; --line:#2b3852;
+    --text:#edf2ff; --muted:#93a2bd; --accent:#78a7ff;
+    --first:#f5d76e; --second:#69b7ff; --third:#bd91ff;
+    --off:#7e899d; --leave:#ff91b5; --day:#f0a66d;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:22px; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif; }
+  main { max-width:1180px; margin:auto; }
+  header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+  h1 { margin:0 0 6px; font-size:clamp(24px,4vw,34px); letter-spacing:-1px; }
+  .sub { color:var(--muted); font-size:13px; }
+  .month { display:flex; align-items:center; gap:8px; }
+  button,select { font:inherit; }
+  button { border:1px solid var(--line); color:var(--text); background:var(--panel2); padding:9px 12px; border-radius:9px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  select { color:var(--text); background:#10192b; border:1px solid var(--line); border-radius:8px; padding:9px; }
+  .summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:16px; }
+  .stat,.panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; }
+  .stat { padding:14px; min-height:82px; }
+  .stat small { display:block; color:var(--muted); margin-bottom:7px; }
+  .stat strong { font-size:22px; }
+  .panel { padding:16px; margin-bottom:16px; }
+  .panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  h2 { font-size:16px; margin:0; }
+  .legend { display:flex; flex-wrap:wrap; gap:7px; color:var(--muted); font-size:12px; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:4px; }
+  .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:10px; }
+  table { width:100%; min-width:740px; border-collapse:collapse; font-size:13px; }
+  th,td { padding:10px 8px; text-align:center; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { position:sticky; top:0; background:#1b2740; color:#c5d2e8; z-index:1; }
+  td:first-child,th:first-child { position:sticky; left:0; background:#172238; z-index:2; font-weight:700; }
+  th:first-child { z-index:3; }
+  tr:last-child td { border-bottom:0; }
+  .shift { display:inline-block; min-width:48px; padding:5px 7px; border-radius:7px; font-weight:700; font-size:12px; }
+  .first { background:#594b1d; color:var(--first); }
+  .second { background:#183f5c; color:var(--second); }
+  .third { background:#402b62; color:var(--third); }
+  .off { background:#30394b; color:#c0c9d8; }
+  .leave { background:#592b40; color:var(--leave); }
+  .unknown { color:#71809b; border:1px dashed #52617a; background:transparent; font-weight:500; }
+  td button.cell { padding:0; border:0; background:transparent; }
+  td button.cell:hover .shift { outline:1px solid var(--accent); }
+  .tools { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .field { display:flex; flex-direction:column; gap:6px; min-width:0; }
+  label { color:var(--muted); font-size:12px; }
+  .form-row { display:flex; gap:8px; flex-wrap:wrap; align-items:end; }
+  .form-row .field { flex:1; }
+  .hint { color:var(--muted); font-size:12px; line-height:1.6; margin:10px 0 0; }
+  .warning { color:#ffd48b; }
+  .primary { background:#315a9f; border-color:#4777c5; }
+  .danger { color:#ffb3c8; }
+  .footer { text-align:center; color:#71809b; font-size:11px; padding:8px 0 24px; }
+  @media(max-width:680px) {
+    body { padding:14px 10px; }
+    .summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .tools { grid-template-columns:1fr; }
+    .stat { min-height:72px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>근무현황판</h1>
+      <div class="sub">개인 근무 확인 · 동료 근무 확인 · 연차 기록</div>
+    </div>
+    <div class="month">
+      <button id="prevMonth" aria-label="이전 달">‹</button>
+      <strong id="monthTitle">2026년 11월</strong>
+      <button id="nextMonth" aria-label="다음 달">›</button>
+    </div>
+  </header>
+
+  <section class="summary" id="summary"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>날짜별 근무표</h2>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--first)"></i>1근</span>
+        <span><i class="dot" style="background:var(--second)"></i>2근</span>
+        <span><i class="dot" style="background:var(--third)"></i>3근</span>
+        <span><i class="dot" style="background:var(--off)"></i>휴무</span>
+        <span><i class="dot" style="background:var(--leave)"></i>연차</span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <p class="hint">근무표의 셀을 누르면 해당 날짜의 근무를 직접 수정할 수 있습니다. '미입력'은 실제 근무를 아직 입력하지 않은 날짜입니다.</p>
+  </section>
+
+  <section class="tools">
+    <div class="panel">
+      <div class="panel-head"><h2>연차 등록</h2></div>
+      <div class="form-row">
+        <div class="field"><label for="leaveDate">날짜</label><input id="leaveDate" type="date"></div>
+        <div class="field"><label for="leavePerson">직원</label><select id="leavePerson"></select></div>
+      </div>
+      <div class="form-row" style="margin-top:10px">
+        <button class="primary" id="addLeave">연차 적용</button>
+        <button id="removeLeave" class="danger">선택 날짜 연차 취소</button>
+      </div>
+      <p class="hint">연차는 원래 근무를 삭제하지 않고 별도 기록으로 덮어 표시합니다. 취소하면 원래 근무가 다시 표시됩니다.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>데이터 관리</h2></div>
+      <div class="form-row">
+        <button id="exportData">백업 파일 저장</button>
+        <label class="field" style="flex:1">백업 파일 불러오기<input id="importData" type="file" accept="application/json"></label>
+      </div>
+      <p class="hint">입력한 근무와 연차는 이 기기의 브라우저에 자동 저장됩니다. 다른 기기에서는 백업 파일을 옮겨 불러오세요.</p>
+    </div>
+  </section>
+  <div class="footer">SHIFT DASHBOARD · 개인 기기 저장 방식</div>
+</main>
+
+<script>
+  // 직원 이름과 화면 표시 순서
+  const PEOPLE = ['오세영','조덕진','김재민','조장행'];
+  const LABELS = ['오세영','진','민','행'];
+  const SHIFTS = ['오전1','오전2','오전3','오전4','오전5','오후1','오후2','오후3','오후4','오후5','야간1','야간2','야간3','야간4','야간5','휴무','맞교대 주간','맞교대 야간','미입력'];
+
+  // 확인된 11월 초 근무만 입력합니다. 나머지는 임의로 추정하지 않습니다.
+  const INITIAL = {
+    "2026-11-01":{"오세영":"휴무","조덕진":"오전5","김재민":"오후2"},
+    "2026-11-02":{"오세영":"오전1","조덕진":"휴무","김재민":"오후3"},
+    "2026-11-03":{"오세영":"오전2","조덕진":"야간1","김재민":"오후4"}
+  };
+  const KEY = 'shift-dashboard-data-v1';
+  let viewYear = 2026, viewMonth = 10; // 월은 0부터 시작
+  let data = loadData();
+
+  function loadData() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY));
+      if (saved && saved.schedule && saved.leaves) return saved;
+    } catch (e) { console.warn('저장 데이터 읽기 실패', e); }
+    return {schedule:structuredClone(INITIAL), leaves:{}};
+  }
+  function saveData() {
+    localStorage.setItem(KEY, JSON.stringify(data));
+    render();
+  }
+  function dateKey(y,m,d) {
+    return y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+  }
+  function shiftClass(value) {
+    if (!value) return 'unknown';
+    if (value === '연차') return 'leave';
+    if (value === '휴무') return 'off';
+    if (value.startsWith('오전')) return 'first';
+    if (value.startsWith('오후')) return 'second';
+    if (value.startsWith('야간')) return 'third';
+    if (value.includes('주간')) return 'second';
+    if (value.includes('야간')) return 'third';
+    return 'unknown';
+  }
+  function effectiveShift(key, person) {
+    if (data.leaves[key] && data.leaves[key].includes(person)) return '연차';
+    return data.schedule[key]?.[person] || '';
+  }
+  function render() {
+    const days = new Date(viewYear, viewMonth + 1, 0).getDate();
+    document.getElementById('monthTitle').textContent = viewYear + '년 ' + (viewMonth+1) + '월';
+    document.getElementById('tableHead').innerHTML = '<tr><th>날짜</th>' + PEOPLE.map((p,i)=>'<th>'+LABELS[i]+'</th>').join('') + '</tr>';
+    const body = document.getElementById('tableBody');
+    body.innerHTML = '';
+    for (let d=1; d<=days; d++) {
+      const key = dateKey(viewYear,viewMonth,d);
+      const weekday = ['일','월','화','수','목','금','토'][new Date(viewYear,viewMonth,d).getDay()];
+      const tr = document.createElement('tr');
+      const dateCell = document.createElement('td');
+      dateCell.textContent = d + '일 (' + weekday + ')';
+      tr.appendChild(dateCell);
+      PEOPLE.forEach(person => {
+        const td = document.createElement('td');
+        const value = effectiveShift(key,person);
+        const button = document.createElement('button');
+        button.className = 'cell';
+        button.title = person + ' · ' + key + ' · 근무 수정';
+        const span = document.createElement('span');
+        span.className = 'shift ' + shiftClass(value);
+        span.textContent = value || '미입력';
+        button.appendChild(span);
+        button.addEventListener('click',()=>editShift(key,person));
+        td.appendChild(button);
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+    renderSummary(days);
+    document.getElementById('leaveDate').value = dateKey(viewYear,viewMonth,1);
+  }
+  function renderSummary(days) {
+    const key = dateKey(viewYear,viewMonth,1);
+    const known = PEOPLE.reduce((sum,p)=>sum+(data.schedule[key]?.[p] ? 1:0),0);
+    const leaveCount = Object.entries(data.leaves).filter(([k,v])=>k.startsWith(viewYear+'-'+String(viewMonth+1).padStart(2,'0'))).reduce((n,[k,v])=>n+v.length,0);
+    const enteredDays = Array.from({length:days},(_,i)=>dateKey(viewYear,viewMonth,i+1)).filter(k=>data.schedule[k] && PEOPLE.some(p=>data.schedule[k][p])).length;
+    document.getElementById('summary').innerHTML =
+      '<div class="stat"><small>대상 직원</small><strong>4명</strong></div>'+
+      '<div class="stat"><small>근무 입력 날짜</small><strong>'+enteredDays+' / '+days+'일</strong></div>'+
+      '<div class="stat"><small>등록 연차</small><strong>'+leaveCount+'건</strong></div>'+
+      '<div class="stat"><small>1일 기준 입력</small><strong>'+known+' / 4명</strong></div>';
+  }
+  function editShift(key,person) {
+    const current = data.schedule[key]?.[person] || '미입력';
+    const answer = prompt(person+' · '+key+'\n근무를 입력하세요.\n예: 오전1, 오후3, 야간2, 휴무',current);
+    if (answer === null) return;
+    const value = answer.trim();
+    if (!value) {
+      if (data.schedule[key]) delete data.schedule[key][person];
+    } else {
+      if (!data.schedule[key]) data.schedule[key] = {};
+      data.schedule[key][person] = value;
+    }
+    saveData();
+  }
+  document.getElementById('prevMonth').addEventListener('click',()=>{
+    viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} render();
+  });
+  document.getElementById('nextMonth').addEventListener('click',()=>{
+    viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} render();
+  });
+  PEOPLE.forEach((p,i)=>{
+    const option=document.createElement('option'); option.value=p; option.textContent=p+' ('+LABELS[i]+')';
+    document.getElementById('leavePerson').appendChild(option);
+  });
+  document.getElementById('addLeave').addEventListener('click',()=>{
+    const key=document.getElementById('leaveDate').value;
+    const person=document.getElementById('leavePerson').value;
+    if(!key){alert('연차 날짜를 선택해주세요.');return;}
+    if(!data.leaves[key]) data.leaves[key]=[];
+    if(!data.leaves[key].includes(person)) data.leaves[key].push(person);
+    saveData();
+  });
+  document.getElementById('removeLeave').addEventListener('click',()=>{
+    const key=document.getElementById('leaveDate').value;
+    const person=document.getElementById('leavePerson').value;
+    if(!key || !data.leaves[key]) return;
+    data.leaves[key]=data.leaves[key].filter(p=>p!==person);
+    if(!data.leaves[key].length) delete data.leaves[key];
+    saveData();
+  });
+  document.getElementById('exportData').addEventListener('click',()=>{
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a');
+    a.href=url; a.download='근무현황판_백업.json'; a.click(); URL.revokeObjectURL(url);
+  });
+  document.getElementById('importData').addEventListener('change',async e=>{
+    const file=e.target.files[0]; if(!file) return;
+    try {
+      const loaded=JSON.parse(await file.text());
+      if(!loaded.schedule || !loaded.leaves) throw new Error('형식이 올바르지 않습니다.');
+      data=loaded; saveData(); alert('백업 데이터를 불러왔습니다.');
+    } catch(err) { alert('불러오기 실패: '+err.message); }
+    e.target.value='';
+  });
+  render();
+</script>
+</body>
+</html>
