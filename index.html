@@ -75,6 +75,7 @@
   .share-day { min-height:82px; padding:8px 3px; text-align:center; border:1px solid var(--line); border-radius:9px; background:#10192b; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
   .share-day small { display:block; color:#d4def0; font-size:13px; font-weight:700; }
   .share-day strong { display:block; font-size:23px; line-height:1.1; margin-top:1px; }
+  .share-day .share-off-car { display:block; width:58px; height:30px; object-fit:contain; margin-top:-1px; }
   .share-day .share-shift { display:block; font-size:12px; line-height:1.2; color:#e7edfa; font-weight:700; margin-top:1px; }
   .share-day.is-off { background:#4b1824; border-color:#a83c50; }
   .share-day.is-off small, .share-day.is-off strong, .share-day.is-off .share-shift { color:#ff9aaa; }
@@ -762,9 +763,27 @@
     // 날짜마다 한 줄씩 쓰고, 날짜 사이에는 빈 줄을 하나 둡니다.
     return Array.from({length:days},(_,i)=>personalLine(dateKey(viewYear,viewMonth,i+1))).join('\n\n');
   }
+  // 휴무일에 사용할 테슬리퍼 그림을 별도 파일에서 불러옵니다.
+  let offCarImageDataUrl = '';
+  const offCarImageReady = fetch('model_y_juniper_ultra_red.webp.b64')
+    .then(response => {
+      if (!response.ok) throw new Error('휴무일 차량 아이콘을 불러오지 못했습니다.');
+      return response.text();
+    })
+    .then(encoded => {
+      offCarImageDataUrl = 'data:image/webp;base64,' + encoded.trim();
+      const image = new Image();
+      image.src = offCarImageDataUrl;
+      return image.decode().then(() => image);
+    })
+    .catch(error => {
+      console.error(error);
+      return null;
+    });
+
   function ownShiftIcon(value) {
     if (!value || value === '미입력') return '·';
-    if (value === '휴무') return '☕';
+    if (value === '휴무') return '🚗';
     if (value === '연차') return '연';
     if (value === '맞교대 주간') return '주';
     if (value === '맞교대 야간') return '야';
@@ -807,7 +826,16 @@
       if (value === '맞교대 주간' || value === '맞교대 야간') cell.classList.add('is-match');
       if (isHoliday(key)) cell.classList.add('is-holiday');
       const day = document.createElement('small'); day.textContent = d+'일';
-      const icon = document.createElement('strong'); icon.textContent = ownShiftIcon(value);
+      let icon;
+      if (value === '휴무') {
+        icon = document.createElement('img');
+        icon.className = 'share-off-car';
+        icon.alt = '테슬리퍼';
+        offCarImageReady.then(image => { if (image) icon.src = image.src; });
+      } else {
+        icon = document.createElement('strong');
+        icon.textContent = ownShiftIcon(value);
+      }
       const shift = document.createElement('span'); shift.className = 'share-shift'; shift.textContent = value;
       if (isHoliday(key)) { const holiday = document.createElement('span'); holiday.className = 'share-holiday'; holiday.textContent = '공휴일'; cell.append(day,holiday,icon,shift); }
       else cell.append(day,icon,shift);
@@ -1088,7 +1116,9 @@
   });
 
   // 화면의 7칸 달력과 색상을 반영해 고해상도 PNG 파일을 만듭니다.
-  function createSharePng() {
+  async function createSharePng() {
+    // 공유 PNG를 그리기 전에 차량 아이콘 이미지가 준비되도록 기다립니다.
+    const offCarImage = await offCarImageReady;
     const days = new Date(viewYear,viewMonth+1,0).getDate();
     const firstDay = new Date(viewYear,viewMonth,1).getDay();
     const weeks = Math.ceil((firstDay + days) / 7);
@@ -1186,9 +1216,14 @@
       ctx.fillStyle=main;
       ctx.font="700 20px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
       ctx.fillText(d+'일',x+cellWidth/2,y+32);
-      ctx.fillStyle=icon;
-      ctx.font="700 43px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
-      ctx.fillText(ownShiftIcon(value),x+cellWidth/2,y+86);
+      if (value === '휴무' && offCarImage) {
+        // 휴무일에는 커피 이모지 대신 울트라 레드 테슬리퍼 그림을 넣습니다.
+        ctx.drawImage(offCarImage,x+cellWidth/2-34,y+68,68,33);
+      } else {
+        ctx.fillStyle=icon;
+        ctx.font="700 43px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
+        ctx.fillText(ownShiftIcon(value),x+cellWidth/2,y+86);
+      }
       ctx.fillStyle=label;
       ctx.font="700 17px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
       ctx.fillText(value,x+cellWidth/2,y+119);
