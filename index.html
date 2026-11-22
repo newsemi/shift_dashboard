@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.95</title>
+<title>근무현황판 v1.96</title>
 <style>
   :root {
     color-scheme: dark;
@@ -232,7 +232,7 @@
       <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.95 · 공휴일 표시 강화</div>
+  <div class="footer">SHIFT DASHBOARD · v1.96 · 공휴일 표시 강화</div>
 </main>
 
 <dialog id="shiftDialog">
@@ -364,7 +364,7 @@
         saved.officialHolidayCache = saved.officialHolidayCache && typeof saved.officialHolidayCache === 'object' ? saved.officialHolidayCache : {};
         saved.officialHolidayFetchedAt = saved.officialHolidayFetchedAt && typeof saved.officialHolidayFetchedAt === 'object' ? saved.officialHolidayFetchedAt : {};
         saved.overrides = saved.overrides && typeof saved.overrides === 'object' ? saved.overrides : {};
-        // 기존 버전의 저장 데이터에는 v1.95 급여 설정 기본값을 보충합니다.
+        // 기존 버전의 저장 데이터에는 v1.96 급여 설정 기본값을 보충합니다.
         saved.baseSalary = Number.isFinite(Number(saved.baseSalary)) ? Number(saved.baseSalary) : 2172000;
         saved.fixedOvertimePay = Number.isFinite(Number(saved.fixedOvertimePay)) ? Number(saved.fixedOvertimePay) : 728000;
         saved.hourlyRate = Number.isFinite(Number(saved.hourlyRate)) && Number(saved.hourlyRate)>0 ? Number(saved.hourlyRate) : 11549;
@@ -667,6 +667,13 @@
   function findShiftPerson(key, role) {
     return PEOPLE.find(p => shiftRole(effectiveShift(key,p)) === role) || '';
   }
+
+  // 맞교대처럼 일반 오전·오후·야간 역할로 분류되지 않는 근무의 짝을 찾습니다.
+  // 같은 날짜에 지정한 근무값과 정확히 일치하는 직원을 반환합니다.
+  function findExactShiftPerson(key, shiftValue) {
+    return PEOPLE.find(p => effectiveShift(key,p) === shiftValue) || '';
+  }
+
   function personalLine(key) {
     const own = effectiveShift(key,'오세영');
     const date = new Date(key + 'T00:00:00');
@@ -686,8 +693,18 @@
       before = findShiftPerson(key,'오전');
       after = findShiftPerson(key,'야간');
     } else if (role === '야간') {
-      before = findShiftPerson(key,'오후');
-      const next = new Date(date); next.setDate(next.getDate()+1);
+      // 일반 야간의 전근무자는 당일 오후자입니다.
+      // 다만 맞교대 야간은 오후자가 없는 2인 맞교대 편성이므로
+      // 같은 날의 맞교대 주간 근무자를 전근무자로 표시합니다.
+      if (own === '맞교대 야간') {
+        before = findExactShiftPerson(key,'맞교대 주간');
+      } else {
+        before = findShiftPerson(key,'오후');
+      }
+
+      // 야간 근무 다음 순서는 다음 날짜의 오전 근무자이므로 기존 규칙을 유지합니다.
+      const next = new Date(date);
+      next.setDate(next.getDate()+1);
       after = findShiftPerson(dateKey(next.getFullYear(),next.getMonth(),next.getDate()),'오전');
     }
     return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + '.';
