@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.93</title>
+<title>근무현황판 v1.94</title>
 <style>
   :root {
     color-scheme: dark;
@@ -155,7 +155,8 @@
         <h2>내 근무일지 · 오세영</h2>
         <div class="form-row">
           <button id="copyJournal">일지 복사</button>
-          <button id="downloadJournal" class="primary">TXT 저장</button>
+          <button id="downloadJournal">TXT 저장</button>
+          <button id="downloadAlarmCalendar" class="primary">근무 알람 일정 저장</button>
         </div>
       </div>
       <div id="personalJournal" class="journal"></div>
@@ -231,7 +232,7 @@
       <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.93 · 공휴일 표시 강화</div>
+  <div class="footer">SHIFT DASHBOARD · v1.94 · 공휴일 표시 강화</div>
 </main>
 
 <dialog id="shiftDialog">
@@ -363,7 +364,7 @@
         saved.officialHolidayCache = saved.officialHolidayCache && typeof saved.officialHolidayCache === 'object' ? saved.officialHolidayCache : {};
         saved.officialHolidayFetchedAt = saved.officialHolidayFetchedAt && typeof saved.officialHolidayFetchedAt === 'object' ? saved.officialHolidayFetchedAt : {};
         saved.overrides = saved.overrides && typeof saved.overrides === 'object' ? saved.overrides : {};
-        // 기존 버전의 저장 데이터에는 v1.93 급여 설정 기본값을 보충합니다.
+        // 기존 버전의 저장 데이터에는 v1.94 급여 설정 기본값을 보충합니다.
         saved.baseSalary = Number.isFinite(Number(saved.baseSalary)) ? Number(saved.baseSalary) : 2172000;
         saved.fixedOvertimePay = Number.isFinite(Number(saved.fixedOvertimePay)) ? Number(saved.fixedOvertimePay) : 728000;
         saved.hourlyRate = Number.isFinite(Number(saved.hourlyRate)) && Number(saved.hourlyRate)>0 ? Number(saved.hourlyRate) : 11549;
@@ -877,6 +878,121 @@
     const a=document.createElement('a'); a.href=url; a.download='오세영_근무일지_'+viewYear+'_'+String(viewMonth+1).padStart(2,'0')+'.txt'; a.click();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
+
+  // 근무 종류별 준비 시작 시각입니다. 휴무와 연차는 알람 일정에서 제외합니다.
+  const PREP_ALARM_TIMES = {
+    '오전': '053000',       // 오전 근무와 맞교대 주간은 05:30
+    '오후': '133000',       // 오후 근무는 13:30
+    '야간': '213000',       // 일반 야간 근무는 21:30
+    '맞교대 야간': '173000' // 맞교대 야간은 17:30
+  };
+
+  // iCalendar 제목의 특수문자를 표준에 맞게 안전하게 바꿉니다.
+  function escapeCalendarText(value) {
+    return String(value)
+      .split('\\').join('\\\\')
+      .split(';').join('\\;')
+      .split(',').join('\\,')
+      .split('\n').join('\\n');
+  }
+
+  // 현재 화면에서 선택한 달의 근무를 아이폰 캘린더용 일정 파일로 만듭니다.
+  function createAlarmCalendar() {
+    const days = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const events = [];
+
+    // 날짜마다 연차 반영까지 끝난 최종 근무를 확인합니다.
+    for (let day = 1; day <= days; day++) {
+      const key = dateKey(viewYear, viewMonth, day);
+      const shift = effectiveShift(key, '오세영');
+
+      // 휴무·연차·미입력은 알람을 만들지 않습니다.
+      if (!shift || shift === '휴무' || shift === '연차') continue;
+
+      let alarmTime = '';
+      let alarmLabel = '';
+
+      // 맞교대 주간은 오전, 맞교대 야간은 별도 17:30 알람을 적용합니다.
+      if (shift === '맞교대 주간') {
+        alarmTime = PREP_ALARM_TIMES['오전'];
+        alarmLabel = '맞교대 주간';
+      } else if (shift === '맞교대 야간') {
+        alarmTime = PREP_ALARM_TIMES['맞교대 야간'];
+        alarmLabel = '맞교대 야간';
+      } else if (/^오전[1-5]$/.test(shift)) {
+        alarmTime = PREP_ALARM_TIMES['오전'];
+        alarmLabel = shift;
+      } else if (/^오후[1-5]$/.test(shift)) {
+        alarmTime = PREP_ALARM_TIMES['오후'];
+        alarmLabel = shift;
+      } else if (/^야간[1-5]$/.test(shift)) {
+        alarmTime = PREP_ALARM_TIMES['야간'];
+        alarmLabel = shift;
+      }
+
+      // 알 수 없는 근무 형태는 잘못된 시각으로 등록하지 않습니다.
+      if (!alarmTime) continue;
+
+      const datePart = key.split('-').join('');
+      const startDateTime = datePart + 'T' + alarmTime;
+      // 알람은 시작 시각에 울리고, 캘린더 이벤트 자체는 1분간 유지합니다.
+      const startHour = Number(alarmTime.slice(0, 2));
+      const startMinute = Number(alarmTime.slice(2, 4));
+      const endDate = new Date(viewYear, viewMonth, day, startHour, startMinute + 1);
+      const endDateTime = datePart + 'T' +
+        String(endDate.getHours()).padStart(2, '0') +
+        String(endDate.getMinutes()).padStart(2, '0') + '00';
+      const stamp = new Date().toISOString().slice(0, 19).replaceAll('-', '').replaceAll(':', '') + 'Z';
+
+      events.push([
+        'BEGIN:VEVENT',
+        'UID:' + key + '-' + alarmTime + '@shift-dashboard',
+        'DTSTAMP:' + stamp,
+        'DTSTART;TZID=Asia/Seoul:' + startDateTime,
+        'DTEND;TZID=Asia/Seoul:' + endDateTime,
+        'SUMMARY:' + escapeCalendarText('출근 준비 · ' + alarmLabel),
+        'DESCRIPTION:' + escapeCalendarText('근무현황판에서 생성한 출근 준비 알람입니다.'),
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        'TRIGGER:PT0M',
+        'DESCRIPTION:' + escapeCalendarText('출근 준비 시작 시간입니다.'),
+        'END:VALARM',
+        'END:VEVENT'
+      ].join('\\r\\n'));
+    }
+
+    // 모든 근무 알람을 한국 시간대가 지정된 iCalendar 문서로 묶습니다.
+    const calendarLines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Newsemi//Shift Dashboard//KO',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'X-WR-CALNAME:근무 준비 알람',
+      'X-WR-TIMEZONE:Asia/Seoul'
+    ].concat(events, ['END:VCALENDAR']);
+
+    return { content: calendarLines.join('\\r\\n') + '\\r\\n', count: events.length };
+  }
+
+  // 아이폰에서 열 수 있도록 선택한 달의 알람을 .ics 파일로 저장합니다.
+  document.getElementById('downloadAlarmCalendar').addEventListener('click', () => {
+    const result = createAlarmCalendar();
+    if (result.count === 0) {
+      alert('선택한 달에는 등록할 근무 알람이 없습니다.');
+      return;
+    }
+
+    const blob = new Blob([result.content], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '근무알람_' + viewYear + '_' + String(viewMonth + 1).padStart(2, '0') + '.ics';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    alert(result.count + '개의 근무 알람 일정을 만들었습니다. 파일을 열어 아이폰 캘린더에 추가해주세요.');
+  });
+
   // 화면의 7칸 달력과 색상을 반영해 고해상도 PNG 파일을 만듭니다.
   function createSharePng() {
     const days = new Date(viewYear,viewMonth+1,0).getDate();
