@@ -699,44 +699,58 @@
     const own = effectiveShift(key,'오세영');
     const date = new Date(key + 'T00:00:00');
     const label = String(date.getMonth()+1).padStart(2,'0') + '/' + String(date.getDate()).padStart(2,'0');
+
+    // 미입력·휴무·연차는 앞뒤 근무자 없이 본인 상태만 표시합니다.
     if (!own) return label + ' 미입력.';
     if (own === '휴무' || own === '연차') return label + ' ' + own + '.';
 
-    const role = shiftRole(own);
-    if (!role) return label + ' ' + own + '.';
-
     let before = '', after = '';
+
+    // 맞교대 주간은 일반 오전·오후·야간과 별도의 순서로 처리합니다.
+    // 전날 맞교대 야간자가 있으면 우선하고, 없으면 전날 일반 야간자를 찾습니다.
     if (own === '맞교대 주간') {
-      // 맞교대 주간의 전근무자는 전날 야간 근무자입니다.
-      // 전날도 맞교대 편성이었다면 맞교대 야간자를 우선 찾고, 없으면 일반 야간자를 찾습니다.
       const prev = new Date(date);
       prev.setDate(prev.getDate()-1);
       const prevKey = dateKey(prev.getFullYear(),prev.getMonth(),prev.getDate());
       before = findExactShiftPerson(prevKey,'맞교대 야간') || findShiftPerson(prevKey,'야간');
-      // 같은 날 이어지는 맞교대 야간 근무자를 다음 근무자로 표시합니다.
+
+      // 맞교대 주간의 다음 근무자는 같은 날 맞교대 야간자입니다.
       after = findExactShiftPerson(key,'맞교대 야간');
-    } else if (role === '오전') {
-      const prev = new Date(date); prev.setDate(prev.getDate()-1);
+      return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + '.';
+    }
+
+    // 맞교대 야간은 당일 맞교대 주간자와 다음 날 주간/오전자를 연결합니다.
+    if (own === '맞교대 야간') {
+      before = findExactShiftPerson(key,'맞교대 주간');
+
+      const next = new Date(date);
+      next.setDate(next.getDate()+1);
+      const nextKey = dateKey(next.getFullYear(),next.getMonth(),next.getDate());
+
+      // 다음 날 맞교대 주간이 있으면 우선 표시하고, 없을 때 일반 오전자를 찾습니다.
+      after = findExactShiftPerson(nextKey,'맞교대 주간') || findShiftPerson(nextKey,'오전');
+      return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + '.';
+    }
+
+    // 일반 오전·오후·야간은 기존 근무 순서를 그대로 적용합니다.
+    const role = shiftRole(own);
+    if (!role) return label + ' ' + own + '.';
+
+    if (role === '오전') {
+      const prev = new Date(date);
+      prev.setDate(prev.getDate()-1);
       before = findShiftPerson(dateKey(prev.getFullYear(),prev.getMonth(),prev.getDate()),'야간');
       after = findShiftPerson(key,'오후');
     } else if (role === '오후') {
       before = findShiftPerson(key,'오전');
       after = findShiftPerson(key,'야간');
     } else if (role === '야간') {
-      // 일반 야간의 전근무자는 당일 오후자입니다.
-      // 다만 맞교대 야간은 오후자가 없는 2인 맞교대 편성이므로
-      // 같은 날의 맞교대 주간 근무자를 전근무자로 표시합니다.
-      if (own === '맞교대 야간') {
-        before = findExactShiftPerson(key,'맞교대 주간');
-      } else {
-        before = findShiftPerson(key,'오후');
-      }
-
-      // 야간 근무 다음 순서는 다음 날짜의 오전 근무자이므로 기존 규칙을 유지합니다.
+      before = findShiftPerson(key,'오후');
       const next = new Date(date);
       next.setDate(next.getDate()+1);
       after = findShiftPerson(dateKey(next.getFullYear(),next.getMonth(),next.getDate()),'오전');
     }
+
     return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + '.';
   }
   function getPersonalJournal() {
