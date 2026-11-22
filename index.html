@@ -716,7 +716,7 @@
 
       // 맞교대 주간의 다음 근무자는 같은 날 맞교대 야간자입니다.
       after = findExactShiftPerson(key,'맞교대 야간');
-      return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + '.';
+      return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + ' 풍쇄는.';
     }
 
     // 맞교대 야간은 당일 맞교대 주간자와 다음 날 주간/오전자를 연결합니다.
@@ -729,7 +729,7 @@
 
       // 다음 날 맞교대 주간이 있으면 우선 표시하고, 없을 때 일반 오전자를 찾습니다.
       after = findExactShiftPerson(nextKey,'맞교대 주간') || findShiftPerson(nextKey,'오전');
-      return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + '.';
+      return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + ' 풍쇄는.';
     }
 
     // 일반 오전·오후·야간은 기존 근무 순서를 그대로 적용합니다.
@@ -755,7 +755,7 @@
       after = findExactShiftPerson(nextKey,'맞교대 주간') || findShiftPerson(nextKey,'오전');
     }
 
-    return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + '.';
+    return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + ' 풍쇄는.';
   }
   function getPersonalJournal() {
     const days = new Date(viewYear,viewMonth+1,0).getDate();
