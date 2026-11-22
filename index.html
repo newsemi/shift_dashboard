@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.4</title>
+<title>근무현황판 v1.5</title>
 <style>
   :root {
     color-scheme: dark;
@@ -135,7 +135,7 @@
       <p class="hint">입력한 근무와 연차는 이 기기의 사파리 브라우저에 자동 저장됩니다. 다른 기기에서는 백업 파일을 옮겨 불러오세요. 앱 데이터 삭제 전에는 반드시 백업 파일을 저장하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.4 · 개인 기기 저장 방식</div>
+  <div class="footer">SHIFT DASHBOARD · v1.5 · 개인 기기 저장 방식</div>
 </main>
 
 <dialog id="shiftDialog">
@@ -268,7 +268,10 @@
       if (match) { type = match[1]; number = match[2]; }
     }
     document.getElementById('shiftType').value = type;
-    document.getElementById('shiftNumber').value = number;
+    // 기존 근무 번호가 있으면 유지하고, 새 근무 입력이면 이전 근무의 다음 번호를 기본값으로 씁니다.
+    document.getElementById('shiftNumber').value = /^(오전|오후|야간)[1-5]$/.test(current)
+      ? number
+      : String(getNextShiftNumber(key, person));
     updateShiftNumberState();
     document.getElementById('shiftDialog').showModal();
   }
@@ -277,12 +280,35 @@
     data.leaves[key] = data.leaves[key].filter(p => p !== person);
     if (!data.leaves[key].length) delete data.leaves[key];
   }
+  // 해당 날짜보다 이전의 근무 번호를 찾아 다음 번호를 계산합니다.
+  // 휴무·연차·미입력은 건너뛰고, 5 다음은 1로 순환합니다.
+  function getNextShiftNumber(key, person) {
+    const cursor = new Date(key + 'T00:00:00');
+    for (let i = 0; i < 3660; i++) {
+      cursor.setDate(cursor.getDate() - 1);
+      const previousKey = dateKey(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
+      // 연차로 등록된 날짜는 원래 근무 기록이 있어도 번호 계산에서 제외합니다.
+      if (data.leaves[previousKey]?.includes(person)) continue;
+      const previous = data.schedule[previousKey]?.[person] || '';
+      const match = previous.match(/^(오전|오후|야간)([1-5])$/);
+      if (match) return Number(match[2]) % 5 + 1;
+    }
+    return 1;
+  }
+
   // 휴무·연차·미입력은 번호 선택이 필요 없으므로 비활성화합니다.
   function updateShiftNumberState() {
     const type = document.getElementById('shiftType').value;
     document.getElementById('shiftNumber').disabled = !['오전','오후','야간'].includes(type);
   }
-  document.getElementById('shiftType').addEventListener('change',updateShiftNumberState);
+  // 근무 구분을 선택하면 직전 근무 번호의 다음 번호를 자동으로 넣습니다.
+  document.getElementById('shiftType').addEventListener('change', () => {
+    updateShiftNumberState();
+    const type = document.getElementById('shiftType').value;
+    if (editingShift && ['오전','오후','야간'].includes(type)) {
+      document.getElementById('shiftNumber').value = getNextShiftNumber(editingShift.key, editingShift.person);
+    }
+  });
 
   document.getElementById('cancelShift').addEventListener('click',()=>{
     document.getElementById('shiftDialog').close();
