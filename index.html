@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.9</title>
+<title>근무현황판 v1.10</title>
 <style>
   :root {
     color-scheme: dark;
@@ -193,19 +193,6 @@
 
   <section class="tools">
     <div class="panel">
-      <div class="panel-head"><h2>연차 등록</h2></div>
-      <div class="form-row">
-        <div class="field"><label for="leaveDate">날짜</label><input id="leaveDate" type="date"></div>
-        <div class="field"><label for="leavePerson">직원</label><select id="leavePerson"></select></div>
-      </div>
-      <div class="form-row" style="margin-top:10px">
-        <button class="primary" id="addLeave">연차 적용</button>
-        <button id="removeLeave" class="danger">선택 날짜 연차 취소</button>
-      </div>
-      <p class="hint">연차는 원래 근무를 삭제하지 않고 별도 기록으로 덮어 표시합니다. 취소하면 원래 근무가 다시 표시됩니다.</p>
-    </div>
-
-    <div class="panel">
       <div class="panel-head"><h2>데이터 관리</h2></div>
       <div class="form-row">
         <div class="field" style="flex:1">
@@ -228,7 +215,7 @@
       <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.9 · 자동 순환 근무표 · PNG 공유</div>
+  <div class="footer">SHIFT DASHBOARD · v1.10 · 근무표 연차 편집 · 근무일지 줄바꿈</div>
 </main>
 
 <dialog id="shiftDialog">
@@ -244,7 +231,8 @@
       <option value="맞교대 주간">맞교대 주간</option>
       <option value="맞교대 야간">맞교대 야간</option>
       <option value="휴무">휴무</option>
-      <option value="연차">연차</option>
+      <option value="연차">연차 적용</option>
+      <option value="연차취소">연차 취소 · 원래 근무 복원</option>
     </select>
   </div>
   <div class="field" style="margin-top:12px">
@@ -391,7 +379,6 @@
       body.appendChild(tr);
     }
     renderSummary(days);
-    document.getElementById('leaveDate').value = dateKey(viewYear,viewMonth,1);
     renderPersonalTools();
   }
   function renderSummary(days) {
@@ -413,7 +400,9 @@
 
     // 기존 근무값을 구분(오전/오후/야간)과 번호로 나눠 표시합니다.
     let type = '', number = '1';
-    if (current === '연차' || current === '휴무' || current === '맞교대 주간' || current === '맞교대 야간') {
+    if (current === '연차') {
+      type = '연차취소';
+    } else if (current === '휴무' || current === '맞교대 주간' || current === '맞교대 야간') {
       type = current;
     } else {
       const match = current.match(/^(오전|오후|야간)([1-5])$/);
@@ -471,9 +460,19 @@
     const {key,person} = editingShift;
     const type = document.getElementById('shiftType').value;
     const number = document.getElementById('shiftNumber').value;
+
+    // 연차 취소는 연차 표시만 해제하여 원래 근무를 복원합니다.
+    if (type === '연차취소') {
+      removeLeaveMark(key,person);
+      document.getElementById('shiftDialog').close();
+      editingShift = null;
+      saveData();
+      return;
+    }
+
     const value = ['오전','오후','야간'].includes(type) ? type + number : type;
 
-    // 연차는 별도 연차 기록에 저장해 원래 근무를 보존합니다.
+    // 연차는 원래 근무를 보존하고 별도 기록으로 관리합니다.
     if (value === '연차') {
       if (!data.leaves[key]) data.leaves[key] = [];
       if (!data.leaves[key].includes(person)) data.leaves[key].push(person);
@@ -502,26 +501,6 @@
   });
   document.getElementById('nextMonth').addEventListener('click',()=>{
     viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} render();
-  });
-  PEOPLE.forEach((p,i)=>{
-    const option=document.createElement('option'); option.value=p; option.textContent=p+' ('+LABELS[i]+')';
-    document.getElementById('leavePerson').appendChild(option);
-  });
-  document.getElementById('addLeave').addEventListener('click',()=>{
-    const key=document.getElementById('leaveDate').value;
-    const person=document.getElementById('leavePerson').value;
-    if(!key){alert('연차 날짜를 선택해주세요.');return;}
-    if(!data.leaves[key]) data.leaves[key]=[];
-    if(!data.leaves[key].includes(person)) data.leaves[key].push(person);
-    saveData();
-  });
-  document.getElementById('removeLeave').addEventListener('click',()=>{
-    const key=document.getElementById('leaveDate').value;
-    const person=document.getElementById('leavePerson').value;
-    if(!key || !data.leaves[key]) return;
-    data.leaves[key]=data.leaves[key].filter(p=>p!==person);
-    if(!data.leaves[key].length) delete data.leaves[key];
-    saveData();
   });
   // 저장 위치 선택에 따라 로컬 다운로드 또는 GitHub 비공개 저장소 업로드를 실행합니다.
   document.getElementById('backupTarget').addEventListener('change', e => {
@@ -614,7 +593,7 @@
   function personalLine(key) {
     const own = effectiveShift(key,'오세영');
     const date = new Date(key + 'T00:00:00');
-    const label = (date.getMonth()+1) + '/' + date.getDate();
+    const label = String(date.getMonth()+1).padStart(2,'0') + '/' + String(date.getDate()).padStart(2,'0');
     if (!own) return label + ' 미입력.';
     if (own === '휴무' || own === '연차') return label + ' ' + own + '.';
 
@@ -638,7 +617,8 @@
   }
   function getPersonalJournal() {
     const days = new Date(viewYear,viewMonth+1,0).getDate();
-    return Array.from({length:days},(_,i)=>personalLine(dateKey(viewYear,viewMonth,i+1))).join('\\n');
+    // 날짜마다 한 줄씩 쓰고, 날짜 사이에는 빈 줄을 하나 둡니다.
+    return Array.from({length:days},(_,i)=>personalLine(dateKey(viewYear,viewMonth,i+1))).join('\n\n');
   }
   function ownShiftIcon(value) {
     if (!value || value === '미입력') return '·';
