@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.96</title>
+<title>근무현황판 v1.97</title>
 <style>
   :root {
     color-scheme: dark;
@@ -232,37 +232,33 @@
       <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.96 · 공휴일 표시 강화</div>
+  <div class="footer">SHIFT DASHBOARD · v1.97 · 공휴일 표시 강화</div>
 </main>
 
 <dialog id="shiftDialog">
   <h2>근무 변경</h2>
   <div class="dialog-info" id="shiftDialogInfo"></div>
   <div class="field">
-    <label for="shiftValue">근무 선택 · 선택 즉시 적용</label>
-    <select id="shiftValue">
+    <label for="shiftType">근무 종류</label>
+    <select id="shiftType">
       <option value="">미입력</option>
-      <optgroup label="오전 근무">
-        <option value="오전1">오전1</option><option value="오전2">오전2</option>
-        <option value="오전3">오전3</option><option value="오전4">오전4</option><option value="오전5">오전5</option>
-      </optgroup>
-      <optgroup label="오후 근무">
-        <option value="오후1">오후1</option><option value="오후2">오후2</option>
-        <option value="오후3">오후3</option><option value="오후4">오후4</option><option value="오후5">오후5</option>
-      </optgroup>
-      <optgroup label="야간 근무">
-        <option value="야간1">야간1</option><option value="야간2">야간2</option>
-        <option value="야간3">야간3</option><option value="야간4">야간4</option><option value="야간5">야간5</option>
-      </optgroup>
-      <optgroup label="기타">
-        <option value="맞교대 주간">맞교대 주간</option>
-        <option value="맞교대 야간">맞교대 야간</option>
-        <option value="휴무">휴무</option>
-        <option value="연차">연차</option>
-      </optgroup>
+      <option value="오전">오전</option>
+      <option value="오후">오후</option>
+      <option value="야간">야간</option>
+      <option value="맞교대 주간">맞교대 주간</option>
+      <option value="맞교대 야간">맞교대 야간</option>
+      <option value="휴무">휴무</option>
+      <option value="연차">연차</option>
     </select>
   </div>
-  <p class="hint">근무를 고르면 바로 저장됩니다. 변경하지 않으려면 닫기를 누르세요.</p>
+  <div class="field" style="margin-top:10px">
+    <label for="shiftNumber">근무 번호</label>
+    <select id="shiftNumber">
+      <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+      <option value="4">4</option><option value="5">5</option>
+    </select>
+  </div>
+  <p class="hint">오전·오후·야간 종류와 1~5번을 각각 선택합니다. 맞교대·휴무·연차는 번호를 사용하지 않습니다.</p>
   <div class="dialog-actions">
     <button type="button" id="cancelShift">닫기</button>
   </div>
@@ -364,7 +360,7 @@
         saved.officialHolidayCache = saved.officialHolidayCache && typeof saved.officialHolidayCache === 'object' ? saved.officialHolidayCache : {};
         saved.officialHolidayFetchedAt = saved.officialHolidayFetchedAt && typeof saved.officialHolidayFetchedAt === 'object' ? saved.officialHolidayFetchedAt : {};
         saved.overrides = saved.overrides && typeof saved.overrides === 'object' ? saved.overrides : {};
-        // 기존 버전의 저장 데이터에는 v1.96 급여 설정 기본값을 보충합니다.
+        // 기존 버전의 저장 데이터에는 v1.97 급여 설정 기본값을 보충합니다.
         saved.baseSalary = Number.isFinite(Number(saved.baseSalary)) ? Number(saved.baseSalary) : 2172000;
         saved.fixedOvertimePay = Number.isFinite(Number(saved.fixedOvertimePay)) ? Number(saved.fixedOvertimePay) : 728000;
         saved.hourlyRate = Number.isFinite(Number(saved.hourlyRate)) && Number(saved.hourlyRate)>0 ? Number(saved.hourlyRate) : 11549;
@@ -503,7 +499,12 @@
     editingShift = {key,person};
     const current = effectiveShift(key,person) || '';
     document.getElementById('shiftDialogInfo').textContent = person + ' · ' + key;
-    document.getElementById('shiftValue').value = current;
+
+    // 저장된 근무값을 종류와 번호로 나눠 각각의 선택 휠에 표시합니다.
+    const match = (current || '').match(/^(오전|오후|야간)([1-5])$/);
+    document.getElementById('shiftType').value = match ? match[1] : current;
+    document.getElementById('shiftNumber').value = match ? match[2] : '1';
+    document.getElementById('shiftNumber').disabled = !match;
     document.getElementById('shiftDialog').showModal();
   }
   function removeLeaveMark(key,person) {
@@ -534,7 +535,10 @@
   function applyShiftSelection() {
     if (!editingShift) return;
     const {key,person} = editingShift;
-    const value = document.getElementById('shiftValue').value;
+    const type = document.getElementById('shiftType').value;
+    const number = document.getElementById('shiftNumber').value;
+    // 일반 근무는 종류와 번호를 조합하고, 맞교대·휴무 등은 종류 자체를 저장합니다.
+    const value = /^(오전|오후|야간)$/.test(type) ? type + number : type;
 
     // 연차는 원래 근무를 보존하고 연차 기록으로 표시합니다.
     if (value === '연차') {
@@ -561,8 +565,25 @@
     editingShift = null;
     saveData();
   }
-  // 선택 목록에서 항목을 바꾸는 즉시 적용합니다.
-  document.getElementById('shiftValue').addEventListener('change',applyShiftSelection);
+  // 근무 종류와 번호를 각각 선택할 수 있게 하고, 변경 즉시 저장합니다.
+  document.getElementById('shiftType').addEventListener('change', () => {
+    const type = document.getElementById('shiftType').value;
+    const numberSelect = document.getElementById('shiftNumber');
+    const usesNumber = /^(오전|오후|야간)$/.test(type);
+    numberSelect.disabled = !usesNumber;
+
+    if (usesNumber) {
+      // 종류를 바꾸면 해당 종류의 다음 근무 번호를 기본 선택합니다.
+      const {key,person} = editingShift || {};
+      const current = key && person ? effectiveShift(key,person) : '';
+      const sameType = current.match(/^(오전|오후|야간)([1-5])$/);
+      numberSelect.value = sameType && sameType[1] === type
+        ? sameType[2]
+        : String(getNextShiftNumber(key,person));
+    }
+    applyShiftSelection();
+  });
+  document.getElementById('shiftNumber').addEventListener('change', applyShiftSelection);
   document.getElementById('prevMonth').addEventListener('click',()=>{
     viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} render();
   });
@@ -685,7 +706,16 @@
     if (!role) return label + ' ' + own + '.';
 
     let before = '', after = '';
-    if (role === '오전') {
+    if (own === '맞교대 주간') {
+      // 맞교대 주간의 전근무자는 전날 야간 근무자입니다.
+      // 전날도 맞교대 편성이었다면 맞교대 야간자를 우선 찾고, 없으면 일반 야간자를 찾습니다.
+      const prev = new Date(date);
+      prev.setDate(prev.getDate()-1);
+      const prevKey = dateKey(prev.getFullYear(),prev.getMonth(),prev.getDate());
+      before = findExactShiftPerson(prevKey,'맞교대 야간') || findShiftPerson(prevKey,'야간');
+      // 같은 날 이어지는 맞교대 야간 근무자를 다음 근무자로 표시합니다.
+      after = findExactShiftPerson(key,'맞교대 야간');
+    } else if (role === '오전') {
       const prev = new Date(date); prev.setDate(prev.getDate()-1);
       before = findShiftPerson(dateKey(prev.getFullYear(),prev.getMonth(),prev.getDate()),'야간');
       after = findShiftPerson(key,'오후');
