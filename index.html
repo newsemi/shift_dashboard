@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.94</title>
+<title>근무현황판 v1.95</title>
 <style>
   :root {
     color-scheme: dark;
@@ -232,7 +232,7 @@
       <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.94 · 공휴일 표시 강화</div>
+  <div class="footer">SHIFT DASHBOARD · v1.95 · 공휴일 표시 강화</div>
 </main>
 
 <dialog id="shiftDialog">
@@ -364,7 +364,7 @@
         saved.officialHolidayCache = saved.officialHolidayCache && typeof saved.officialHolidayCache === 'object' ? saved.officialHolidayCache : {};
         saved.officialHolidayFetchedAt = saved.officialHolidayFetchedAt && typeof saved.officialHolidayFetchedAt === 'object' ? saved.officialHolidayFetchedAt : {};
         saved.overrides = saved.overrides && typeof saved.overrides === 'object' ? saved.overrides : {};
-        // 기존 버전의 저장 데이터에는 v1.94 급여 설정 기본값을 보충합니다.
+        // 기존 버전의 저장 데이터에는 v1.95 급여 설정 기본값을 보충합니다.
         saved.baseSalary = Number.isFinite(Number(saved.baseSalary)) ? Number(saved.baseSalary) : 2172000;
         saved.fixedOvertimePay = Number.isFinite(Number(saved.fixedOvertimePay)) ? Number(saved.fixedOvertimePay) : 728000;
         saved.hourlyRate = Number.isFinite(Number(saved.hourlyRate)) && Number(saved.hourlyRate)>0 ? Number(saved.hourlyRate) : 11549;
@@ -975,22 +975,51 @@
     return { content: calendarLines.join('\\r\\n') + '\\r\\n', count: events.length };
   }
 
-  // 아이폰에서 열 수 있도록 선택한 달의 알람을 .ics 파일로 저장합니다.
-  document.getElementById('downloadAlarmCalendar').addEventListener('click', () => {
+  // 아이폰의 공유 시트를 우선 사용해 .ics 파일을 전달합니다.
+  // iOS 사파리에서는 a.download 방식이 차단되거나 무시될 수 있기 때문입니다.
+  document.getElementById('downloadAlarmCalendar').addEventListener('click', async () => {
+    // 선택한 달의 근무표를 바탕으로 캘린더 파일 내용을 만듭니다.
     const result = createAlarmCalendar();
     if (result.count === 0) {
       alert('선택한 달에는 등록할 근무 알람이 없습니다.');
       return;
     }
 
+    // 파일 이름과 MIME 형식을 지정해 아이폰이 캘린더 파일로 인식하게 합니다.
+    const fileName = '근무알람_' + viewYear + '_' + String(viewMonth + 1).padStart(2, '0') + '.ics';
+    const calendarFile = new File([result.content], fileName, {
+      type: 'text/calendar;charset=utf-8'
+    });
+
+    // iOS 사파리의 공유 시트로 파일을 전달합니다.
+    // 공유 시트에서 '캘린더' 또는 '파일에 저장' 등 가능한 앱을 선택할 수 있습니다.
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [calendarFile] })) {
+      try {
+        await navigator.share({
+          title: '근무 준비 알람',
+          files: [calendarFile]
+        });
+        return;
+      } catch (error) {
+        // 사용자가 공유 창을 닫은 경우에는 불필요한 오류 안내를 띄우지 않습니다.
+        if (error.name === 'AbortError') return;
+        console.warn('캘린더 파일 공유 실패:', error);
+      }
+    }
+
+    // 파일 공유를 지원하지 않는 브라우저를 위한 다운로드 대체 경로입니다.
+    // 이 경로는 데스크톱 브라우저에 적합하며 iOS에서는 공유 기능을 우선 권장합니다.
     const blob = new Blob([result.content], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = '근무알람_' + viewYear + '_' + String(viewMonth + 1).padStart(2, '0') + '.ics';
+    link.download = fileName;
+    document.body.appendChild(link);
     link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-    alert(result.count + '개의 근무 알람 일정을 만들었습니다. 파일을 열어 아이폰 캘린더에 추가해주세요.');
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+    alert(result.count + '개의 알람 일정을 만들었습니다. 브라우저에서 파일 저장 또는 열기를 선택해주세요.');
   });
 
   // 화면의 7칸 달력과 색상을 반영해 고해상도 PNG 파일을 만듭니다.
