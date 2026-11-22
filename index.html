@@ -313,7 +313,7 @@
         return 0;
       };
       const remaining = PEOPLE
-        .filter(p => p !== dayLeaves[0] && p !== person)
+        .filter(p => p !== dayLeaves[0])
         .map(p => ({person:p, role:roleOf(original[p])}))
         .filter(x => x.role > 0)
         .sort((a,b) => a.role - b.role);
