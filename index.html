@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.92</title>
+<title>근무현황판 v1.93</title>
 <style>
   :root {
     color-scheme: dark;
@@ -84,6 +84,9 @@
   .share-day.is-match .share-shift { color:#d8c3ff; }
   .share-day.is-holiday { border:2px solid #ff7186; background:#492632; }
   .share-day .share-holiday { display:block; color:#ff9aaa; font-size:10px; line-height:1; font-weight:800; }
+  /* 급여 설정 입력칸은 화면 폭에 맞춰 자동으로 줄바꿈합니다. */
+  .pay-settings { display:grid; grid-template-columns:repeat(4,minmax(130px,1fr)); gap:9px; margin:12px 0; }
+  .pay-settings input { width:100%; min-width:0; padding:9px; color:var(--text); background:#10192b; border:1px solid var(--line); border-radius:8px; }
   .pay-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:12px; }
   .pay-result { padding:12px; background:#10192b; border:1px solid var(--line); border-radius:9px; }
   .pay-result small { display:block; color:var(--muted); margin-bottom:5px; }
@@ -94,6 +97,7 @@
   @media(max-width:680px) {
     .personal-grid { grid-template-columns:1fr; }
     .pay-grid { grid-template-columns:1fr 1fr; }
+    .pay-settings { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .share-day { min-height:68px; padding:6px 1px; }
     .share-day small { font-size:12px; }
     .share-day strong { font-size:20px; }
@@ -170,18 +174,27 @@
   <section class="panel">
     <div class="panel-head">
       <h2>급여 예상 · 오세영</h2>
-      <div class="form-row">
-        <div class="field">
-          <label for="hourlyRate">시급 (원)</label>
-          <input id="hourlyRate" type="number" min="0" step="10" inputmode="numeric" placeholder="예: 12000">
-        </div>
-        <div class="field">
-          <label for="taxRate">예상 공제율 (%)</label>
-          <input id="taxRate" type="number" min="0" max="50" step="0.5" inputmode="decimal">
-        </div>
-      </div>
+      <span class="hint">선택한 달 1일~말일 근무분 · 다음 달 10일 지급</span>
     </div>
+    <!-- 급여명세서의 고정급과 변동수당 기준을 언제든 직접 조정할 수 있습니다. -->
+    <div class="pay-settings">
+      <div class="field"><label for="baseSalary">기본급 (원)</label><input id="baseSalary" type="number" min="0" step="1000" inputmode="numeric"></div>
+      <div class="field"><label for="fixedOvertimePay">고정 시간외수당 (원)</label><input id="fixedOvertimePay" type="number" min="0" step="1000" inputmode="numeric"></div>
+      <div class="field"><label for="hourlyRate">추가수당 기준 시급 (원)</label><input id="hourlyRate" type="number" min="0" step="1" inputmode="numeric"></div>
+      <div class="field"><label for="extraOvertimeHours">별도 추가 연장시간</label><input id="extraOvertimeHours" type="number" min="0" step="0.5" inputmode="decimal"></div>
+      <div class="field"><label for="matchDayHours">일반 주간 맞교대 추가시간</label><input id="matchDayHours" type="number" min="0" step="0.5" inputmode="decimal"></div>
+      <div class="field"><label for="matchNightHours">일반 야간 맞교대 추가시간</label><input id="matchNightHours" type="number" min="0" step="0.5" inputmode="decimal"></div>
+      <div class="field"><label for="holidayDayHours">공휴일 주간 맞교대 인정시간</label><input id="holidayDayHours" type="number" min="0" step="0.5" inputmode="decimal"></div>
+      <div class="field"><label for="holidayNightHours">공휴일 야간 맞교대 인정시간</label><input id="holidayNightHours" type="number" min="0" step="0.5" inputmode="decimal"></div>
+      <div class="field"><label for="overtimeMultiplier">추가수당 배율</label><input id="overtimeMultiplier" type="number" min="1" max="3" step="0.1" inputmode="decimal"></div>
+      <div class="field"><label for="taxRate">예상 공제율 (%)</label><input id="taxRate" type="number" min="0" max="50" step="0.5" inputmode="decimal"></div>
+    </div>
+    <p class="hint">기본급과 고정 시간외수당은 고정급으로 합산합니다. 일반 맞교대는 주간·야간 추가시간에 1.5배를 적용하고, 공휴일 근무는 일반 맞교대 추가시간을 중복하지 않고 공휴일 인정시간 전체에 1.5배를 적용합니다. 공휴일 주간 맞교대는 우선 11시간으로 설정했습니다. 별도 추가 연장시간은 매월 직접 입력하세요. 공제율은 급여명세서 분석 전까지 임시 참고값입니다.</p>
+    </section>
+
     <div class="form-row">
+      <div class="field">
+        <label for="holidayDate">    <div class="form-row">
       <div class="field">
         <label for="holidayDate">공휴일 날짜 추가 또는 제외</label>
         <input id="holidayDate" type="date">
@@ -218,7 +231,7 @@
       <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.92 · 공휴일 표시 강화</div>
+  <div class="footer">SHIFT DASHBOARD · v1.93 · 공휴일 표시 강화</div>
 </main>
 
 <dialog id="shiftDialog">
@@ -350,12 +363,22 @@
         saved.officialHolidayCache = saved.officialHolidayCache && typeof saved.officialHolidayCache === 'object' ? saved.officialHolidayCache : {};
         saved.officialHolidayFetchedAt = saved.officialHolidayFetchedAt && typeof saved.officialHolidayFetchedAt === 'object' ? saved.officialHolidayFetchedAt : {};
         saved.overrides = saved.overrides && typeof saved.overrides === 'object' ? saved.overrides : {};
-        saved.hourlyRate = Number(saved.hourlyRate || 0);
+        // 기존 버전의 저장 데이터에는 v1.93 급여 설정 기본값을 보충합니다.
+        saved.baseSalary = Number.isFinite(Number(saved.baseSalary)) ? Number(saved.baseSalary) : 2172000;
+        saved.fixedOvertimePay = Number.isFinite(Number(saved.fixedOvertimePay)) ? Number(saved.fixedOvertimePay) : 728000;
+        saved.hourlyRate = Number.isFinite(Number(saved.hourlyRate)) && Number(saved.hourlyRate)>0 ? Number(saved.hourlyRate) : 11549;
+        saved.extraOvertimeHours = Number.isFinite(Number(saved.extraOvertimeHours)) ? Number(saved.extraOvertimeHours) : 0;
+        saved.matchDayHours = Number.isFinite(Number(saved.matchDayHours)) ? Number(saved.matchDayHours) : 3;
+        saved.matchNightHours = Number.isFinite(Number(saved.matchNightHours)) ? Number(saved.matchNightHours) : 4;
+        saved.holidayDayHours = Number.isFinite(Number(saved.holidayDayHours)) ? Number(saved.holidayDayHours) : 11;
+        saved.holidayNightHours = Number.isFinite(Number(saved.holidayNightHours)) ? Number(saved.holidayNightHours) : 12;
+        saved.overtimeMultiplier = Number.isFinite(Number(saved.overtimeMultiplier)) ? Number(saved.overtimeMultiplier) : 1.5;
         saved.taxRate = Number.isFinite(Number(saved.taxRate)) ? Number(saved.taxRate) : 10;
         return saved;
       }
     } catch (e) { console.warn('저장 데이터 읽기 실패', e); }
-    return {schedule:structuredClone(INITIAL), leaves:{}, overrides:{}, holidayDates:[], holidayExclusions:[], officialHolidayCache:{}, officialHolidayFetchedAt:{}, hourlyRate:0, taxRate:10};
+    // 최초 실행에는 알려주신 급여명세서의 고정급과 시급을 기본 적용합니다.
+    return {schedule:structuredClone(INITIAL), leaves:{}, overrides:{}, holidayDates:[], holidayExclusions:[], officialHolidayCache:{}, officialHolidayFetchedAt:{}, baseSalary:2172000, fixedOvertimePay:728000, hourlyRate:11549, extraOvertimeHours:0, matchDayHours:3, matchNightHours:4, holidayDayHours:11, holidayNightHours:12, overtimeMultiplier:1.5, taxRate:10};
   }
   function saveData() {
     localStorage.setItem(KEY, JSON.stringify(data));
@@ -725,43 +748,72 @@
       grid.appendChild(cell);
     }
 
+    // 저장된 급여 설정을 읽어 고정급과 변동수당을 따로 계산합니다.
     const rate = Number(data.hourlyRate || 0);
+    const baseSalary = Number(data.baseSalary || 0);
+    const fixedOvertimePay = Number(data.fixedOvertimePay || 0);
+    const extraOvertimeHours = Number(data.extraOvertimeHours || 0);
+    const matchDayHours = Number(data.matchDayHours ?? 3);
+    const matchNightHours = Number(data.matchNightHours ?? 4);
+    const holidayDayHours = Number(data.holidayDayHours ?? 11);
+    const holidayNightHours = Number(data.holidayNightHours ?? 12);
+    const multiplier = Number(data.overtimeMultiplier || 1.5);
     const tax = Math.min(50,Math.max(0,Number(data.taxRate ?? 10)));
     const monthlyDays = new Date(viewYear,viewMonth+1,0).getDate();
-    let baseHours=0, holidayHours=0, matchHours=0, workDays=0, matchDayCount=0, matchNightCount=0;
+    let holidayHours=0, matchHours=0, workDays=0, matchDayCount=0, matchNightCount=0, holidayWorkDays=0;
+
+    // 선택한 달의 1일부터 말일까지 본인 근무를 하루씩 확인합니다.
     for (let d=1;d<=monthlyDays;d++) {
       const key = dateKey(viewYear,viewMonth,d);
       const value = effectiveShift(key,'오세영');
+      // 휴무·연차·미입력은 실제 근로가 아니므로 수당 계산에서 제외합니다.
       if (!value || value==='휴무' || value==='연차') continue;
       workDays++;
-      // 일반 근무와 맞교대의 기본 근로시간은 우선 8시간으로 계산합니다.
-      baseHours += 8;
-      if (value === '맞교대 주간') { matchHours += 3; matchDayCount++; }
-      if (value === '맞교대 야간') { matchHours += 4; matchNightCount++; }
       if (isHoliday(key)) {
-        // 공휴일은 실제 근무시간 기준: 일반 8시간, 맞교대 주간 11시간, 야간 12시간.
-        holidayHours += value === '맞교대 주간' ? 11 : value === '맞교대 야간' ? 12 : 8;
+        // 공휴일 맞교대는 평일 맞교대 추가시간을 중복하지 않습니다.
+        // 주간 11시간·야간 12시간을 적용하며 설정 화면에서 수정할 수 있습니다.
+        holidayWorkDays++;
+        if (value === '맞교대 주간') holidayHours += holidayDayHours;
+        else if (value === '맞교대 야간') holidayHours += holidayNightHours;
+        else holidayHours += 8; // 일반 교대 공휴일 근무는 우선 8시간으로 계산합니다.
+      } else {
+        // 평일 맞교대에만 주간 3시간·야간 4시간 추가분을 반영합니다.
+        if (value === '맞교대 주간') { matchHours += matchDayHours; matchDayCount++; }
+        if (value === '맞교대 야간') { matchHours += matchNightHours; matchNightCount++; }
       }
     }
-    const basePay = baseHours * rate;
-    const matchExtra = matchHours * rate * 1.5;
-    const holidayExtra = holidayHours * rate * 1.5;
-    const extraPay = matchExtra + holidayExtra;
-    const gross = basePay + extraPay;
+
+    // 고정급은 월 근무일수와 관계없이 매월 동일하게 더합니다.
+    const matchExtra = matchHours * rate * multiplier;
+    const manualExtraPay = extraOvertimeHours * rate * multiplier;
+    const holidayExtra = holidayHours * rate * multiplier;
+    const variablePay = matchExtra + manualExtraPay + holidayExtra;
+    const fixedPay = baseSalary + fixedOvertimePay;
+    const gross = fixedPay + variablePay;
     const net = gross * (1-tax/100);
     const money = n => Math.round(n).toLocaleString('ko-KR')+'원';
+
+    // 설정값은 화면에 다시 표시해 다음 달에도 직접 수정할 수 있게 합니다.
+    const settingIds = {baseSalary, fixedOvertimePay, hourlyRate:rate, extraOvertimeHours, matchDayHours, matchNightHours, holidayDayHours, holidayNightHours, overtimeMultiplier:multiplier, taxRate:tax};
+    Object.entries(settingIds).forEach(([id,value])=>{
+      const input=document.getElementById(id);
+      if(input) input.value=value;
+    });
+
+    // 급여를 고정급·맞교대·별도 연장·공휴일 항목으로 나누어 보여줍니다.
     document.getElementById('payResults').innerHTML =
-      '<div class="pay-result"><small>기본급 예상 · '+baseHours+'시간</small><strong>'+money(basePay)+'</strong></div>'+
-      '<div class="pay-result"><small>추가수당 예상</small><strong>'+money(extraPay)+'</strong></div>'+
+      '<div class="pay-result"><small>기본급</small><strong>'+money(baseSalary)+'</strong></div>'+
+      '<div class="pay-result"><small>고정 시간외수당</small><strong>'+money(fixedOvertimePay)+'</strong></div>'+
+      '<div class="pay-result"><small>고정급 합계</small><strong>'+money(fixedPay)+'</strong></div>'+
+      '<div class="pay-result"><small>일반 맞교대 추가수당 · 주간 '+matchDayCount+'회 / 야간 '+matchNightCount+'회</small><strong>'+money(matchExtra)+'</strong></div>'+
+      '<div class="pay-result"><small>별도 추가 연장 · '+extraOvertimeHours+'시간</small><strong>'+money(manualExtraPay)+'</strong></div>'+
+      '<div class="pay-result"><small>공휴일 근무 · '+holidayHours+'시간 / '+holidayWorkDays+'일</small><strong>'+money(holidayExtra)+'</strong></div>'+
+      '<div class="pay-result"><small>변동수당 합계</small><strong>'+money(variablePay)+'</strong></div>'+
       '<div class="pay-result"><small>세전 합계</small><strong>'+money(gross)+'</strong></div>'+
       '<div class="pay-result"><small>세후 예상 · 공제 '+tax+'%</small><strong>'+money(net)+'</strong></div>'+
-      '<div class="pay-result"><small>맞교대 수당 · 주간 '+matchDayCount+'회 / 야간 '+matchNightCount+'회</small><strong>'+money(matchExtra)+'</strong></div>'+
-      '<div class="pay-result"><small>공휴일 근무 · '+holidayHours+'시간</small><strong>'+money(holidayExtra)+'</strong></div>'+
       '<div class="pay-result"><small>근무일수</small><strong>'+workDays+'일</strong></div>'+
-      '<div class="pay-result"><small>적용 시급</small><strong>'+money(rate)+'</strong></div>';
+      '<div class="pay-result"><small>적용 시급 / 가산율</small><strong>'+money(rate)+' · '+multiplier+'배</strong></div>';
 
-    document.getElementById('hourlyRate').value = data.hourlyRate || '';
-    document.getElementById('taxRate').value = tax;
     const monthPrefix = viewYear+'-'+String(viewMonth+1).padStart(2,'0');
     const official = Object.entries(officialHolidayMap(viewYear))
       .filter(([k])=>k.startsWith(monthPrefix) && !data.holidayExclusions.includes(k))
@@ -774,15 +826,24 @@
     if (excluded.length) parts.push('제외: '+excluded.map(k=>Number(k.slice(-2))+'일').join(', '));
     document.getElementById('holidayList').textContent = parts.length ? parts.join(' · ') : '이번 달 공휴일 없음';
   }
-  document.getElementById('hourlyRate').addEventListener('change',e=>{
-    data.hourlyRate = Math.max(0,Number(e.target.value||0));
-    localStorage.setItem(KEY,JSON.stringify(data));
-    renderPersonalTools();
-  });
-  document.getElementById('taxRate').addEventListener('change',e=>{
-    data.taxRate = Math.min(50,Math.max(0,Number(e.target.value||0)));
-    localStorage.setItem(KEY,JSON.stringify(data));
-    renderPersonalTools();
+  // 급여 설정을 바꾸면 값을 저장하고 예상 급여를 즉시 다시 계산합니다.
+  // 항목별 허용 범위를 지정해 음수나 비정상적인 입력을 방지합니다.
+  const paySettingLimits = {
+    baseSalary:[0,100000000], fixedOvertimePay:[0,100000000], hourlyRate:[0,1000000],
+    extraOvertimeHours:[0,500], matchDayHours:[0,24], matchNightHours:[0,24],
+    holidayDayHours:[0,24], holidayNightHours:[0,24], overtimeMultiplier:[1,3], taxRate:[0,50]
+  };
+  Object.entries(paySettingLimits).forEach(([id,limits])=>{
+    const input=document.getElementById(id);
+    input.addEventListener('change',()=>{
+      // 빈칸은 0으로 보고, 각 항목의 최소·최대 범위 안으로 보정합니다.
+      const entered=Number(input.value || 0);
+      const value=Math.min(limits[1],Math.max(limits[0],Number.isFinite(entered)?entered:0));
+      data[id]=value;
+      input.value=value;
+      localStorage.setItem(KEY,JSON.stringify(data));
+      renderPersonalTools();
+    });
   });
   document.getElementById('addHoliday').addEventListener('click',async()=>{
     const key=document.getElementById('holidayDate').value;
