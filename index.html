@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#111827">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>근무현황판 v1.91</title>
+<title>근무현황판 v1.92</title>
 <style>
   :root {
     color-scheme: dark;
@@ -82,11 +82,14 @@
   .share-day.is-leave small, .share-day.is-leave strong, .share-day.is-leave .share-shift { color:#ffd2da; }
   .share-day.is-match { border-color:#b48bff; background:#30214b; }
   .share-day.is-match .share-shift { color:#d8c3ff; }
+  .share-day.is-holiday { border:2px solid #ff7186; background:#492632; }
+  .share-day .share-holiday { display:block; color:#ff9aaa; font-size:10px; line-height:1; font-weight:800; }
   .pay-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:12px; }
   .pay-result { padding:12px; background:#10192b; border:1px solid var(--line); border-radius:9px; }
   .pay-result small { display:block; color:var(--muted); margin-bottom:5px; }
   .pay-result strong { font-size:18px; }
   .holiday-list { color:var(--muted); font-size:12px; margin-top:7px; line-height:1.5; }
+  td:first-child.is-holiday-date { background:#4a2631; color:#ff9aaa; }
   .share-day.empty { opacity:.25; }
   @media(max-width:680px) {
     .personal-grid { grid-template-columns:1fr; }
@@ -215,7 +218,7 @@
       <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.91 · 즉시 근무 적용 · 공휴일 자동화</div>
+  <div class="footer">SHIFT DASHBOARD · v1.92 · 공휴일 표시 강화</div>
 </main>
 
 <dialog id="shiftDialog">
@@ -438,7 +441,8 @@
       const weekday = ['일','월','화','수','목','금','토'][new Date(viewYear,viewMonth,d).getDay()];
       const tr = document.createElement('tr');
       const dateCell = document.createElement('td');
-      dateCell.textContent = d + '일 (' + weekday + ')';
+      dateCell.textContent = d + '일 (' + weekday + ')' + (isHoliday(key) ? ' · 공휴일' : '');
+      if (isHoliday(key)) dateCell.classList.add('is-holiday-date');
       tr.appendChild(dateCell);
       PEOPLE.forEach(person => {
         const td = document.createElement('td');
@@ -712,10 +716,12 @@
       if (value === '휴무') cell.classList.add('is-off');
       if (value === '연차') cell.classList.add('is-leave');
       if (value === '맞교대 주간' || value === '맞교대 야간') cell.classList.add('is-match');
+      if (isHoliday(key)) cell.classList.add('is-holiday');
       const day = document.createElement('small'); day.textContent = d+'일';
       const icon = document.createElement('strong'); icon.textContent = ownShiftIcon(value);
       const shift = document.createElement('span'); shift.className = 'share-shift'; shift.textContent = value;
-      cell.append(day,icon,shift);
+      if (isHoliday(key)) { const holiday = document.createElement('span'); holiday.className = 'share-holiday'; holiday.textContent = '공휴일'; cell.append(day,holiday,icon,shift); }
+      else cell.append(day,icon,shift);
       grid.appendChild(cell);
     }
 
@@ -864,7 +870,8 @@
       const y = calendarTop + row*cellHeight;
       const key = dateKey(viewYear,viewMonth,d);
       const value = effectiveShift(key,'오세영') || '미입력';
-      let fill='#ffffff', border='#d5deea', main='#24344a', icon='#24344a', label='#45566d';
+      const holiday = isHoliday(key);
+      let fill=holiday?'#fff0f1':'#ffffff', border=holiday?'#e65b70':'#d5deea', main=holiday?'#a52d45':'#24344a', icon='#24344a', label='#45566d';
       if (value==='휴무') { fill='#ffe9ed'; border='#efa0b0'; main='#9f304b'; icon='#d85c78'; label='#a43a54'; }
       else if (value==='연차') { fill='#ffdae3'; border='#e86a87'; main='#8f2340'; icon='#b92f54'; label='#8f2340'; }
       else if (value==='맞교대 주간' || value==='맞교대 야간') { fill='#f0eaff'; border='#b9a0ed'; label='#7053a8'; icon='#7053a8'; }
@@ -873,6 +880,13 @@
       else if (value.startsWith('야간')) { icon='#7854b4'; }
 
       roundedRect(x,y,cellWidth,cellHeight,12,fill,border);
+      if (holiday) {
+        // 공휴일은 날짜 아래에 눈에 띄는 빨간 표시를 추가합니다.
+        ctx.fillStyle='#c83f57';
+        ctx.beginPath(); ctx.roundRect(x+cellWidth/2-42,y+43,84,23,8); ctx.fill();
+        ctx.fillStyle='#ffffff'; ctx.font="800 13px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
+        ctx.textAlign='center'; ctx.fillText('공휴일',x+cellWidth/2,y+60);
+      }
       ctx.textAlign='center';
       ctx.fillStyle=main;
       ctx.font="700 20px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
