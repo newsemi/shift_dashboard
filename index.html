@@ -232,7 +232,7 @@
       <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
     </div>
   </section>
-  <div class="footer">SHIFT DASHBOARD · v1.99 · 공휴일 표시 강화</div>
+  <div class="footer">SHIFT DASHBOARD · v2.00 · 공유 달력 디자인 개선</div>
 </main>
 
 <dialog id="shiftDialog">
@@ -764,7 +764,7 @@
   }
   function ownShiftIcon(value) {
     if (!value || value === '미입력') return '·';
-    if (value === '휴무') return '休';
+    if (value === '휴무') return '☕';
     if (value === '연차') return '연';
     if (value === '맞교대 주간') return '주';
     if (value === '맞교대 야간') return '야';
@@ -1124,12 +1124,12 @@
       ctx.fillText(day,x,titleHeight+31);
     });
 
-    function roundedRect(x,y,w,h,r,fill,stroke) {
+    function roundedRect(x,y,w,h,r,fill,stroke,lineWidth=2) {
       ctx.beginPath();
       ctx.roundRect(x,y,w,h,r);
       ctx.fillStyle = fill;
       ctx.fill();
-      ctx.lineWidth = 2;
+      ctx.lineWidth = lineWidth;
       ctx.strokeStyle = stroke;
       ctx.stroke();
     }
@@ -1142,15 +1142,39 @@
       const key = dateKey(viewYear,viewMonth,d);
       const value = effectiveShift(key,'오세영') || '미입력';
       const holiday = isHoliday(key);
-      let fill=holiday?'#fff0f1':'#ffffff', border=holiday?'#e65b70':'#d5deea', main=holiday?'#a52d45':'#24344a', icon='#24344a', label='#45566d';
+      let fill=holiday?'#fff0f1':'#ffffff', border=holiday?'#e65b70':'#d5deea', main=holiday?'#a52d45':'#24344a', icon='#24344a', label='#45566d', cardLineWidth=2;
       if (value==='휴무') { fill='#ffe9ed'; border='#efa0b0'; main='#9f304b'; icon='#d85c78'; label='#a43a54'; }
       else if (value==='연차') { fill='#ffdae3'; border='#e86a87'; main='#8f2340'; icon='#b92f54'; label='#8f2340'; }
       else if (value==='맞교대 주간' || value==='맞교대 야간') { fill='#f0eaff'; border='#b9a0ed'; label='#7053a8'; icon='#7053a8'; }
-      else if (value.startsWith('오전')) { icon='#a87900'; }
-      else if (value.startsWith('오후')) { icon='#2674b8'; }
-      else if (value.startsWith('야간')) { icon='#7854b4'; }
+      else if (value.startsWith('오전')) {
+        // 오전은 선명한 주황 테두리와 안쪽으로 옅어지는 따뜻한 그라데이션을 적용합니다.
+        if (!holiday) {
+          const gradient=ctx.createRadialGradient(x+cellWidth/2,y+cellHeight/2,8,x+cellWidth/2,y+cellHeight/2,cellWidth*0.72);
+          gradient.addColorStop(0,'#fffdf9'); gradient.addColorStop(0.68,'#fce8d2'); gradient.addColorStop(1,'#f6d39b');
+          fill=gradient; border='#d98232'; cardLineWidth=7;
+        }
+        main='#713c16'; icon='#a85b27'; label='#713c16';
+      }
+      else if (value.startsWith('오후')) {
+        // 오후는 한낮의 황금빛을 강조하고 중앙은 밝게 유지합니다.
+        if (!holiday) {
+          const gradient=ctx.createRadialGradient(x+cellWidth/2,y+cellHeight/2,8,x+cellWidth/2,y+cellHeight/2,cellWidth*0.72);
+          gradient.addColorStop(0,'#fffef7'); gradient.addColorStop(0.68,'#fff2bd'); gradient.addColorStop(1,'#f3c84f');
+          fill=gradient; border='#c69a00'; cardLineWidth=7;
+        }
+        main='#654600'; icon='#a87913'; label='#654600';
+      }
+      else if (value.startsWith('야간')) {
+        // 야간은 차분한 청색 테두리와 옅은 푸른색 그라데이션을 적용합니다.
+        if (!holiday) {
+          const gradient=ctx.createRadialGradient(x+cellWidth/2,y+cellHeight/2,8,x+cellWidth/2,y+cellHeight/2,cellWidth*0.72);
+          gradient.addColorStop(0,'#fbfcff'); gradient.addColorStop(0.68,'#e6edfa'); gradient.addColorStop(1,'#8499c5');
+          fill=gradient; border='#526fa8'; cardLineWidth=7;
+        }
+        main='#172b50'; icon='#384d79'; label='#172b50';
+      }
 
-      roundedRect(x,y,cellWidth,cellHeight,12,fill,border);
+      roundedRect(x,y,cellWidth,cellHeight,12,fill,border,cardLineWidth);
       if (holiday) {
         // 공휴일은 날짜 아래에 눈에 띄는 빨간 표시를 추가합니다.
         ctx.fillStyle='#c83f57';
