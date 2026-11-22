@@ -287,7 +287,8 @@
   // 해당 연도의 공휴일 목록을 무료 공개 API에서 받아 기기에 캐시합니다.
   const holidayLoads = {};
   function officialHolidayMap(year) {
-    return data.officialHolidayCache?.[year] || HOLIDAY_FALLBACK[year] || {};
+    // 저장된 API 자료가 비어 있어도 2026년 기본 공휴일 목록은 항상 보완합니다.
+    return Object.assign({},HOLIDAY_FALLBACK[year] || {},data.officialHolidayCache?.[year] || {});
   }
   function isHoliday(key) {
     const excluded = data.holidayExclusions?.includes(key);
