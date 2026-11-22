@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>근무현황판 v1.92</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:#0b1020; --panel:#151d30; --panel2:#1b2740; --line:#2b3852;
+    --text:#edf2ff; --muted:#93a2bd; --accent:#78a7ff;
+    --first:#f5d76e; --second:#69b7ff; --third:#bd91ff;
+    --off:#7e899d; --leave:#ff91b5; --day:#f0a66d;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:22px; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif; }
+  main { max-width:1180px; margin:auto; }
+  header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+  h1 { margin:0 0 6px; font-size:clamp(24px,4vw,34px); letter-spacing:-1px; }
+  .sub { color:var(--muted); font-size:13px; }
+  .month { display:flex; align-items:center; gap:8px; }
+  button,select { font:inherit; }
+  button { border:1px solid var(--line); color:var(--text); background:var(--panel2); padding:9px 12px; border-radius:9px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  select { color:var(--text); background:#10192b; border:1px solid var(--line); border-radius:8px; padding:9px; }
+  .summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:16px; }
+  .stat,.panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; }
+  .stat { padding:14px; min-height:82px; }
+  .stat small { display:block; color:var(--muted); margin-bottom:7px; }
+  .stat strong { font-size:22px; }
+  .panel { padding:16px; margin-bottom:16px; }
+  .panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  h2 { font-size:16px; margin:0; }
+  .legend { display:flex; flex-wrap:wrap; gap:7px; color:var(--muted); font-size:12px; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:4px; }
+  .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:10px; }
+  table { width:100%; min-width:740px; border-collapse:collapse; font-size:13px; }
+  th,td { padding:10px 8px; text-align:center; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { position:sticky; top:0; background:#1b2740; color:#c5d2e8; z-index:1; }
+  td:first-child,th:first-child { position:sticky; left:0; background:#172238; z-index:2; font-weight:700; }
+  th:first-child { z-index:3; }
+  tr:last-child td { border-bottom:0; }
+  .shift { display:inline-block; min-width:48px; padding:5px 7px; border-radius:7px; font-weight:700; font-size:12px; }
+  .first { background:#594b1d; color:var(--first); }
+  .second { background:#183f5c; color:var(--second); }
+  .third { background:#402b62; color:var(--third); }
+  .off { background:#30394b; color:#c0c9d8; }
+  .leave { background:#592b40; color:var(--leave); }
+  .unknown { color:#71809b; border:1px dashed #52617a; background:transparent; font-weight:500; }
+  td button.cell { padding:0; border:0; background:transparent; }
+  td button.cell:hover .shift { outline:1px solid var(--accent); }
+  .tools { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .field { display:flex; flex-direction:column; gap:6px; min-width:0; }
+  label { color:var(--muted); font-size:12px; }
+  .form-row { display:flex; gap:8px; flex-wrap:wrap; align-items:end; }
+  .form-row .field { flex:1; }
+  .hint { color:var(--muted); font-size:12px; line-height:1.6; margin:10px 0 0; }
+  .warning { color:#ffd48b; }
+  .primary { background:#315a9f; border-color:#4777c5; }
+  .danger { color:#ffb3c8; }
+  dialog { width:min(92vw,360px); border:1px solid var(--line); border-radius:14px; padding:18px; color:var(--text); background:var(--panel); }
+  dialog::backdrop { background:rgba(0,0,0,.68); }
+  dialog h2 { margin:0 0 14px; }
+  dialog .dialog-info { color:var(--muted); font-size:13px; margin-bottom:12px; }
+  dialog select { width:100%; padding:12px; font-size:16px; }
+  dialog .dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  .footer { text-align:center; color:#71809b; font-size:11px; padding:8px 0 24px; }
+
+  .personal-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .journal { white-space:pre-wrap; background:#10192b; border:1px solid var(--line); border-radius:9px; padding:12px; font:13px/1.85 ui-monospace,SFMono-Regular,monospace; min-height:130px; }
+  .share-calendar { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; }
+  .share-day { min-height:82px; padding:8px 3px; text-align:center; border:1px solid var(--line); border-radius:9px; background:#10192b; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .share-day small { display:block; color:#d4def0; font-size:13px; font-weight:700; }
+  .share-day strong { display:block; font-size:23px; line-height:1.1; margin-top:1px; }
+  .share-day .share-shift { display:block; font-size:12px; line-height:1.2; color:#e7edfa; font-weight:700; margin-top:1px; }
+  .share-day.is-off { background:#4b1824; border-color:#a83c50; }
+  .share-day.is-off small, .share-day.is-off strong, .share-day.is-off .share-shift { color:#ff9aaa; }
+  .share-day.is-leave { background:#651b31; border:2px solid #ff526f; }
+  .share-day.is-leave small, .share-day.is-leave strong, .share-day.is-leave .share-shift { color:#ffd2da; }
+  .share-day.is-match { border-color:#b48bff; background:#30214b; }
+  .share-day.is-match .share-shift { color:#d8c3ff; }
+  .share-day.is-holiday { border:2px solid #ff7186; background:#492632; }
+  .share-day .share-holiday { display:block; color:#ff9aaa; font-size:10px; line-height:1; font-weight:800; }
+  .pay-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:12px; }
+  .pay-result { padding:12px; background:#10192b; border:1px solid var(--line); border-radius:9px; }
+  .pay-result small { display:block; color:var(--muted); margin-bottom:5px; }
+  .pay-result strong { font-size:18px; }
+  .holiday-list { color:var(--muted); font-size:12px; margin-top:7px; line-height:1.5; }
+  td:first-child.is-holiday-date { background:#4a2631; color:#ff9aaa; }
+  .share-day.empty { opacity:.25; }
+  @media(max-width:680px) {
+    .personal-grid { grid-template-columns:1fr; }
+    .pay-grid { grid-template-columns:1fr 1fr; }
+    .share-day { min-height:68px; padding:6px 1px; }
+    .share-day small { font-size:12px; }
+    .share-day strong { font-size:20px; }
+    .share-day .share-shift { font-size:11px; }
+  }
+
+  @media(max-width:680px) {
+    body { padding:14px 10px; }
+    .summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .tools { grid-template-columns:1fr; }
+    .stat { min-height:72px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>근무현황판</h1>
+      <div class="sub">개인 근무 확인 · 동료 근무 확인 · 연차 기록</div>
+    </div>
+    <div class="month">
+      <button id="prevMonth" aria-label="이전 달">‹</button>
+      <strong id="monthTitle">2026년 11월</strong>
+      <button id="nextMonth" aria-label="다음 달">›</button>
+    </div>
+  </header>
+
+  <section class="summary" id="summary"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>날짜별 근무표</h2>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--first)"></i>1근</span>
+        <span><i class="dot" style="background:var(--second)"></i>2근</span>
+        <span><i class="dot" style="background:var(--third)"></i>3근</span>
+        <span><i class="dot" style="background:var(--off)"></i>휴무</span>
+        <span><i class="dot" style="background:var(--leave)"></i>연차</span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <p class="hint">근무표의 셀을 누르면 해당 날짜의 근무를 직접 수정할 수 있습니다. '미입력'은 실제 근무를 아직 입력하지 않은 날짜입니다.</p>
+  </section>
+
+
+  <section class="personal-grid">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>내 근무일지 · 오세영</h2>
+        <div class="form-row">
+          <button id="copyJournal">일지 복사</button>
+          <button id="downloadJournal" class="primary">TXT 저장</button>
+        </div>
+      </div>
+      <div id="personalJournal" class="journal"></div>
+      <p class="hint">앞뒤 근무자는 근무 순서에 따라 자동으로 표시합니다. 오전은 전날 야간자·당일 오후자, 오후는 당일 오전자·야간자, 야간은 당일 오후자·익일 오전자입니다.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>아내분 공유용 · 내 근무만</h2>
+        <button id="shareMyMonth" class="primary">이미지 공유</button>
+      </div>
+      <div id="myShareCalendar" class="share-calendar"></div>
+      <p class="hint">다른 직원 이름과 근무는 표시하지 않습니다. 공유하기를 누르면 화면과 같은 달력 모양의 PNG 이미지로 전달합니다.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>급여 예상 · 오세영</h2>
+      <div class="form-row">
+        <div class="field">
+          <label for="hourlyRate">시급 (원)</label>
+          <input id="hourlyRate" type="number" min="0" step="10" inputmode="numeric" placeholder="예: 12000">
+        </div>
+        <div class="field">
+          <label for="taxRate">예상 공제율 (%)</label>
+          <input id="taxRate" type="number" min="0" max="50" step="0.5" inputmode="decimal">
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label for="holidayDate">공휴일 날짜 추가 또는 제외</label>
+        <input id="holidayDate" type="date">
+      </div>
+      <button id="addHoliday">추가 / 복원</button>
+      <button id="removeHoliday">제외</button>
+    </div>
+    <div id="holidayList" class="holiday-list"></div>
+    <div class="pay-grid" id="payResults"></div>
+    <p class="hint">초기 계산 기준: 일반 근무 기본 8시간, 맞교대도 기본 8시간으로 계산하고 주간 3시간·야간 4시간을 별도 1.5배 수당으로 더합니다. 공휴일은 자동 적용되며, 날짜를 직접 추가하거나 제외할 수 있습니다. 공휴일 수당은 지정된 근무시간 기준 참고치입니다. 세후는 입력한 공제율로 계산한 참고치입니다. 실제 급여명세서와 회사의 수당 중복 규정에 따라 달라질 수 있습니다.</p>
+  </section>
+
+  <section class="tools">
+    <div class="panel">
+      <div class="panel-head"><h2>데이터 관리</h2></div>
+      <div class="form-row">
+        <div class="field" style="flex:1">
+          <label for="backupTarget">백업 저장 위치</label>
+          <select id="backupTarget">
+            <option value="local">이 기기에 파일로 다운로드</option>
+            <option value="github">GitHub 비공개 저장소</option>
+          </select>
+        </div>
+        <button id="exportData" class="primary">백업 저장</button>
+      </div>
+      <div id="githubBackupFields" style="display:none;margin-top:12px">
+        <div class="field">
+          <label for="githubToken">GitHub Fine-grained Personal Access Token</label>
+          <input id="githubToken" type="password" autocomplete="off" placeholder="github_pat_...">
+        </div>
+        <p class="hint">토큰은 이 화면이 열려 있는 동안에만 사용하며 저장하지 않습니다. 새로고침하면 다시 입력해야 합니다. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" style="color:var(--accent)">GitHub에서 토큰 만들기</a></p>
+      </div>
+      <label class="field" style="margin-top:12px">백업 파일 불러오기<input id="importData" type="file" accept="application/json"></label>
+      <p class="hint">근무와 연차는 이 기기의 사파리에 자동 저장됩니다. GitHub 백업은 비공개 저장소 <b>newsemi/shift_dashboard_backup</b>에 날짜별 파일로 추가됩니다. GitHub 토큰에는 해당 저장소만 선택하고 Contents 권한을 Read and write로 설정하세요.</p>
+    </div>
+  </section>
+  <div class="footer">SHIFT DASHBOARD · v1.92 · 공휴일 표시 강화</div>
+</main>
+
+<dialog id="shiftDialog">
+  <h2>근무 변경</h2>
+  <div class="dialog-info" id="shiftDialogInfo"></div>
+  <div class="field">
+    <label for="shiftValue">근무 선택 · 선택 즉시 적용</label>
+    <select id="shiftValue">
+      <option value="">미입력</option>
+      <optgroup label="오전 근무">
+        <option value="오전1">오전1</option><option value="오전2">오전2</option>
+        <option value="오전3">오전3</option><option value="오전4">오전4</option><option value="오전5">오전5</option>
+      </optgroup>
+      <optgroup label="오후 근무">
+        <option value="오후1">오후1</option><option value="오후2">오후2</option>
+        <option value="오후3">오후3</option><option value="오후4">오후4</option><option value="오후5">오후5</option>
+      </optgroup>
+      <optgroup label="야간 근무">
+        <option value="야간1">야간1</option><option value="야간2">야간2</option>
+        <option value="야간3">야간3</option><option value="야간4">야간4</option><option value="야간5">야간5</option>
+      </optgroup>
+      <optgroup label="기타">
+        <option value="맞교대 주간">맞교대 주간</option>
+        <option value="맞교대 야간">맞교대 야간</option>
+        <option value="휴무">휴무</option>
+        <option value="연차">연차</option>
+      </optgroup>
+    </select>
+  </div>
+  <p class="hint">근무를 고르면 바로 저장됩니다. 변경하지 않으려면 닫기를 누르세요.</p>
+  <div class="dialog-actions">
+    <button type="button" id="cancelShift">닫기</button>
+  </div>
+</dialog>
+
+<script>
+  // 직원 이름과 화면 표시 순서
+  const PEOPLE = ['오세영','조덕진','김재민','조장행'];
+  const LABELS = ['오세영','진','민','행'];
+  const SHIFTS = ['오전1','오전2','오전3','오전4','오전5','오후1','오후2','오후3','오후4','오후5','야간1','야간2','야간3','야간4','야간5','휴무','맞교대 주간','맞교대 야간','미입력'];
+
+  // 확인된 11월 초 근무만 입력합니다. 나머지는 임의로 추정하지 않습니다.
+  const INITIAL = {
+    "2026-11-01":{"오세영":"휴무","조덕진":"오전5","김재민":"오후2"},
+    "2026-11-02":{"오세영":"오전1","조덕진":"휴무","김재민":"오후3"},
+    "2026-11-03":{"오세영":"오전2","조덕진":"야간1","김재민":"오후4"}
+  };
+  const KEY = 'shift-dashboard-data-v1';
+  let viewYear = 2026, viewMonth = 10; // 월은 0부터 시작
+  let data = loadData();
+
+  // 2026년 대한민국 공휴일 보완 목록입니다. 자동 API 결과와 합쳐 사용합니다.
+  const HOLIDAY_FALLBACK = {
+    2026: {
+      '2026-01-01':'신정',
+      '2026-02-16':'설날 연휴','2026-02-17':'설날','2026-02-18':'설날 연휴',
+      '2026-03-01':'삼일절','2026-03-02':'대체공휴일(삼일절)',
+      '2026-05-01':'노동절','2026-05-05':'어린이날',
+      '2026-05-24':'부처님오신날','2026-05-25':'대체공휴일(부처님오신날)',
+      '2026-06-03':'전국동시지방선거','2026-06-06':'현충일',
+      '2026-07-17':'제헌절',
+      '2026-08-15':'광복절','2026-08-17':'대체공휴일(광복절)',
+      '2026-09-24':'추석 연휴','2026-09-25':'추석','2026-09-26':'추석 연휴',
+      '2026-10-03':'개천절','2026-10-05':'대체공휴일(개천절)',
+      '2026-10-09':'한글날','2026-12-25':'성탄절'
+    }
+  };
+
+  // 해당 연도의 공휴일 목록을 무료 공개 API에서 받아 기기에 캐시합니다.
+  const holidayLoads = {};
+  function officialHolidayMap(year) {
+    // 저장된 API 자료가 비어 있어도 2026년 기본 공휴일 목록은 항상 보완합니다.
+    return Object.assign({},HOLIDAY_FALLBACK[year] || {},data.officialHolidayCache?.[year] || {});
+  }
+  function isHoliday(key) {
+    const excluded = data.holidayExclusions?.includes(key);
+    return (!excluded && Object.prototype.hasOwnProperty.call(officialHolidayMap(Number(key.slice(0,4))),key))
+      || data.holidayDates.includes(key);
+  }
+  async function loadOfficialHolidays(year) {
+    if (holidayLoads[year]) return holidayLoads[year];
+    const cached = data.officialHolidayCache?.[year];
+    const fetchedAt = Number(data.officialHolidayFetchedAt?.[year] || 0);
+    const cacheFresh = cached && Date.now()-fetchedAt < 30*24*60*60*1000;
+    if (cacheFresh) return cached;
+
+    holidayLoads[year] = (async()=>{
+      try {
+        const response = await fetch('https://nagerholidays.com/api/v4/Holidays/KR/'+year);
+        if (!response.ok) throw new Error('공휴일 API 응답 오류');
+        const rows = await response.json();
+        const map = {};
+        rows.forEach(item=>{
+          const isPublic = item.nationalHoliday === true || item.global === true;
+          const types = item.holidayTypes || item.types || [];
+          if (item.date && isPublic && (!types.length || types.includes('Public'))) {
+            map[item.date] = item.localName || item.name || '공휴일';
+          }
+        });
+        // 2026년은 법정 공휴일 및 선거일 보완 목록을 덧붙입니다.
+        Object.assign(map,HOLIDAY_FALLBACK[year] || {});
+        data.officialHolidayCache[year] = map;
+        data.officialHolidayFetchedAt[year] = Date.now();
+        localStorage.setItem(KEY,JSON.stringify(data));
+        renderPersonalTools();
+        return map;
+      } catch(error) {
+        // 통신이 안 되면 저장된 자료 또는 2026년 기본 목록을 사용합니다.
+        if (!data.officialHolidayCache[year]) {
+          data.officialHolidayCache[year] = HOLIDAY_FALLBACK[year] || {};
+          localStorage.setItem(KEY,JSON.stringify(data));
+        }
+        renderPersonalTools();
+        return data.officialHolidayCache[year];
+      } finally {
+        delete holidayLoads[year];
+      }
+    })();
+    return holidayLoads[year];
+  }
+
+  function loadData() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY));
+      if (saved && saved.schedule && saved.leaves) {
+        // 새 기능의 설정값이 없는 기존 백업도 그대로 사용할 수 있게 기본값을 보충합니다.
+        saved.holidayDates = Array.isArray(saved.holidayDates) ? saved.holidayDates : [];
+        saved.holidayExclusions = Array.isArray(saved.holidayExclusions) ? saved.holidayExclusions : [];
+        saved.officialHolidayCache = saved.officialHolidayCache && typeof saved.officialHolidayCache === 'object' ? saved.officialHolidayCache : {};
+        saved.officialHolidayFetchedAt = saved.officialHolidayFetchedAt && typeof saved.officialHolidayFetchedAt === 'object' ? saved.officialHolidayFetchedAt : {};
+        saved.overrides = saved.overrides && typeof saved.overrides === 'object' ? saved.overrides : {};
+        saved.hourlyRate = Number(saved.hourlyRate || 0);
+        saved.taxRate = Number.isFinite(Number(saved.taxRate)) ? Number(saved.taxRate) : 10;
+        return saved;
+      }
+    } catch (e) { console.warn('저장 데이터 읽기 실패', e); }
+    return {schedule:structuredClone(INITIAL), leaves:{}, overrides:{}, holidayDates:[], holidayExclusions:[], officialHolidayCache:{}, officialHolidayFetchedAt:{}, hourlyRate:0, taxRate:10};
+  }
+  function saveData() {
+    localStorage.setItem(KEY, JSON.stringify(data));
+    render();
+    renderPersonalTools();
+  }
+  function dateKey(y,m,d) {
+    return y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+  }
+  function shiftClass(value) {
+    if (!value) return 'unknown';
+    if (value === '연차') return 'leave';
+    if (value === '휴무') return 'off';
+    if (value.startsWith('오전')) return 'first';
+    if (value.startsWith('오후')) return 'second';
+    if (value.startsWith('야간')) return 'third';
+    if (value.includes('주간')) return 'second';
+    if (value.includes('야간')) return 'third';
+    return 'unknown';
+  }
+
+  // 2026년 11월 실제 근무표에서 확인한 20일 순환 패턴입니다.
+  // 기준일(2026-11-01)부터 날짜 차이를 계산해 앞뒤 달의 근무를 자동 생성합니다.
+  const ROTATION_DAYS = 20;
+  const ROTATION = {
+    '오세영': ['휴무','오전1','오전2','오전3','오전4','오전5','휴무','야간1','야간2','야간3','야간4','야간5','휴무','휴무','오후1','오후2','오후3','오후4','오후5','휴무'],
+    '조덕진': ['오전5','휴무','야간1','야간2','야간3','야간4','야간5','휴무','휴무','오후1','오후2','오후3','오후4','오후5','휴무','휴무','오전1','오전2','오전3','오전4'],
+    '김재민': ['오후2','오후3','오후4','오후5','휴무','휴무','오전1','오전2','오전3','오전4','오전5','휴무','야간1','야간2','야간3','야간4','야간5','휴무','휴무','오후1'],
+    '조장행': ['야간4','야간5','휴무','휴무','오후1','오후2','오후3','오후4','오후5','휴무','휴무','오전1','오전2','오전3','오전4','오전5','휴무','야간1','야간2','야간3']
+  };
+
+  // 사용자가 직접 수정한 값 → 기존 저장 근무 → 순환표 순서로 우선 적용합니다.
+  function baseShift(key, person) {
+    const manual = data.overrides?.[key];
+    if (manual && Object.prototype.hasOwnProperty.call(manual, person)) {
+      return manual[person] || '';
+    }
+    const saved = data.schedule[key]?.[person];
+    if (saved) return saved;
+
+    const [year, month, day] = key.split('-').map(Number);
+    const anchor = Date.UTC(2026, 10, 1);
+    const target = Date.UTC(year, month - 1, day);
+    let index = Math.floor((target - anchor) / 86400000) % ROTATION_DAYS;
+    if (index < 0) index += ROTATION_DAYS;
+    return ROTATION[person]?.[index] || '';
+  }
+
+  function effectiveShift(key, person) {
+    const dayLeaves = data.leaves[key] || [];
+    if (dayLeaves.includes(person)) return '연차';
+
+    // 연차자가 한 명일 때 원래 휴무자는 유지하고, 남은 두 근무자를 맞교대로 전환합니다.
+    if (dayLeaves.length === 1) {
+      const original = Object.fromEntries(PEOPLE.map(p => [p, baseShift(key,p)]));
+      const roleOf = value => {
+        if (/^오전[1-5]$/.test(value || '')) return 1;
+        if (/^오후[1-5]$/.test(value || '')) return 2;
+        if (/^야간[1-5]$/.test(value || '')) return 3;
+        return 0;
+      };
+      const remaining = PEOPLE
+        .filter(p => p !== dayLeaves[0])
+        .map(p => ({person:p, role:roleOf(original[p])}))
+        .filter(x => x.role > 0)
+        .sort((a,b) => a.role - b.role);
+
+      if (remaining.length === 2 && remaining[0].person === person) return '맞교대 주간';
+      if (remaining.length === 2 && remaining[1].person === person) return '맞교대 야간';
+    }
+    return baseShift(key,person);
+  }
+  function render() {
+    // 해당 연도의 공휴일 목록을 자동으로 불러옵니다.
+    loadOfficialHolidays(viewYear);
+    const days = new Date(viewYear, viewMonth + 1, 0).getDate();
+    document.getElementById('monthTitle').textContent = viewYear + '년 ' + (viewMonth+1) + '월';
+    document.getElementById('tableHead').innerHTML = '<tr><th>날짜</th>' + PEOPLE.map((p,i)=>'<th>'+LABELS[i]+'</th>').join('') + '</tr>';
+    const body = document.getElementById('tableBody');
+    body.innerHTML = '';
+    for (let d=1; d<=days; d++) {
+      const key = dateKey(viewYear,viewMonth,d);
+      const weekday = ['일','월','화','수','목','금','토'][new Date(viewYear,viewMonth,d).getDay()];
+      const tr = document.createElement('tr');
+      const dateCell = document.createElement('td');
+      dateCell.textContent = d + '일 (' + weekday + ')' + (isHoliday(key) ? ' · 공휴일' : '');
+      if (isHoliday(key)) dateCell.classList.add('is-holiday-date');
+      tr.appendChild(dateCell);
+      PEOPLE.forEach(person => {
+        const td = document.createElement('td');
+        const value = effectiveShift(key,person);
+        const button = document.createElement('button');
+        button.className = 'cell';
+        button.title = person + ' · ' + key + ' · 근무 수정';
+        const span = document.createElement('span');
+        span.className = 'shift ' + shiftClass(value);
+        span.textContent = value || '미입력';
+        button.appendChild(span);
+        button.addEventListener('click',()=>editShift(key,person));
+        td.appendChild(button);
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+    renderSummary(days);
+    renderPersonalTools();
+  }
+  function renderSummary(days) {
+    const key = dateKey(viewYear,viewMonth,1);
+    const known = PEOPLE.reduce((sum,p)=>sum+(data.schedule[key]?.[p] ? 1:0),0);
+    const leaveCount = Object.entries(data.leaves).filter(([k,v])=>k.startsWith(viewYear+'-'+String(viewMonth+1).padStart(2,'0'))).reduce((n,[k,v])=>n+v.length,0);
+    const enteredDays = Array.from({length:days},(_,i)=>dateKey(viewYear,viewMonth,i+1)).filter(k=>data.schedule[k] && PEOPLE.some(p=>data.schedule[k][p])).length;
+    document.getElementById('summary').innerHTML =
+      '<div class="stat"><small>대상 직원</small><strong>4명</strong></div>'+
+      '<div class="stat"><small>근무 입력 날짜</small><strong>'+enteredDays+' / '+days+'일</strong></div>'+
+      '<div class="stat"><small>등록 연차</small><strong>'+leaveCount+'건</strong></div>'+
+      '<div class="stat"><small>1일 기준 입력</small><strong>'+known+' / 4명</strong></div>';
+  }
+  let editingShift = null;
+  function editShift(key,person) {
+    editingShift = {key,person};
+    const current = effectiveShift(key,person) || '';
+    document.getElementById('shiftDialogInfo').textContent = person + ' · ' + key;
+    document.getElementById('shiftValue').value = current;
+    document.getElementById('shiftDialog').showModal();
+  }
+  function removeLeaveMark(key,person) {
+    if (!data.leaves[key]) return;
+    data.leaves[key] = data.leaves[key].filter(p => p !== person);
+    if (!data.leaves[key].length) delete data.leaves[key];
+  }
+  // 해당 날짜보다 이전의 근무 번호를 찾아 다음 번호를 계산합니다.
+  // 휴무·연차·미입력은 건너뛰고, 5 다음은 1로 순환합니다.
+  function getNextShiftNumber(key, person) {
+    const cursor = new Date(key + 'T00:00:00');
+    for (let i = 0; i < 3660; i++) {
+      cursor.setDate(cursor.getDate() - 1);
+      const previousKey = dateKey(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
+      // 연차로 등록된 날짜는 원래 근무 기록이 있어도 번호 계산에서 제외합니다.
+      if (data.leaves[previousKey]?.includes(person)) continue;
+      const previous = baseShift(previousKey,person);
+      const match = previous.match(/^(오전|오후|야간)([1-5])$/);
+      if (match) return Number(match[2]) % 5 + 1;
+    }
+    return 1;
+  }
+
+  document.getElementById('cancelShift').addEventListener('click',()=>{
+    document.getElementById('shiftDialog').close();
+    editingShift = null;
+  });
+  function applyShiftSelection() {
+    if (!editingShift) return;
+    const {key,person} = editingShift;
+    const value = document.getElementById('shiftValue').value;
+
+    // 연차는 원래 근무를 보존하고 연차 기록으로 표시합니다.
+    if (value === '연차') {
+      if (!data.leaves[key]) data.leaves[key] = [];
+      if (!data.leaves[key].includes(person)) data.leaves[key].push(person);
+    } else {
+      // 다른 근무를 고르면 연차 표시를 해제하고 새 근무를 즉시 저장합니다.
+      removeLeaveMark(key,person);
+      if (!data.overrides) data.overrides = {};
+      if (!data.overrides[key]) data.overrides[key] = {};
+      data.overrides[key][person] = value || '';
+      if (!value) {
+        if (data.schedule[key]) {
+          delete data.schedule[key][person];
+          if (!Object.keys(data.schedule[key]).length) delete data.schedule[key];
+        }
+      } else {
+        if (!data.schedule[key]) data.schedule[key] = {};
+        data.schedule[key][person] = value;
+      }
+    }
+
+    document.getElementById('shiftDialog').close();
+    editingShift = null;
+    saveData();
+  }
+  // 선택 목록에서 항목을 바꾸는 즉시 적용합니다.
+  document.getElementById('shiftValue').addEventListener('change',applyShiftSelection);
+  document.getElementById('prevMonth').addEventListener('click',()=>{
+    viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} render();
+  });
+  document.getElementById('nextMonth').addEventListener('click',()=>{
+    viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} render();
+  });
+  // 저장 위치 선택에 따라 로컬 다운로드 또는 GitHub 비공개 저장소 업로드를 실행합니다.
+  document.getElementById('backupTarget').addEventListener('change', e => {
+    document.getElementById('githubBackupFields').style.display = e.target.value === 'github' ? 'block' : 'none';
+  });
+  document.getElementById('exportData').addEventListener('click', async () => {
+    const json = JSON.stringify(data, null, 2);
+    const target = document.getElementById('backupTarget').value;
+    if (target === 'local') {
+      const blob = new Blob([json], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '근무현황판_백업.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return;
+    }
+
+    // 토큰은 입력창에서만 읽고 localStorage 등에 저장하지 않습니다.
+    const token = document.getElementById('githubToken').value.trim();
+    if (!token) {
+      alert('GitHub 토큰을 먼저 입력해주세요.');
+      document.getElementById('githubToken').focus();
+      return;
+    }
+    const button = document.getElementById('exportData');
+    button.disabled = true;
+    button.textContent = 'GitHub 업로드 중…';
+    try {
+      const now = new Date();
+      const stamp = now.getFullYear() +
+        String(now.getMonth()+1).padStart(2,'0') +
+        String(now.getDate()).padStart(2,'0') + '_' +
+        String(now.getHours()).padStart(2,'0') +
+        String(now.getMinutes()).padStart(2,'0') +
+        String(now.getSeconds()).padStart(2,'0');
+      const path = 'backups/shift_backup_' + stamp + '.json';
+      // 한글이 포함된 JSON도 안전하게 Base64로 변환합니다.
+      const encoded = btoa(unescape(encodeURIComponent(json)));
+      const response = await fetch('https://api.github.com/repos/newsemi/shift_dashboard_backup/contents/' + path, {
+        method: 'PUT',
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': 'Bearer ' + token,
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: '근무현황판 백업 ' + stamp,
+          content: encoded,
+          branch: 'main'
+        })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        const reason = result.message || ('HTTP ' + response.status);
+        throw new Error(reason);
+      }
+      alert('GitHub 비공개 저장소에 백업했습니다.\\n파일: ' + path);
+    } catch (error) {
+      console.error('GitHub 백업 실패', error);
+      alert('GitHub 백업에 실패했습니다.\\n토큰 권한과 저장소 설정을 확인해주세요.\\n' + error.message);
+    } finally {
+      button.disabled = false;
+      button.textContent = '백업 저장';
+    }
+  });
+  document.getElementById('importData').addEventListener('change',async e=>{
+    const file=e.target.files[0]; if(!file) return;
+    try {
+      const loaded=JSON.parse(await file.text());
+      if(!loaded.schedule || !loaded.leaves) throw new Error('형식이 올바르지 않습니다.');
+      // 구버전 백업에 새 설정 항목이 없어도 기본값을 채워 호환성을 유지합니다.
+      loaded.holidayDates = Array.isArray(loaded.holidayDates) ? loaded.holidayDates : [];
+      loaded.holidayExclusions = Array.isArray(loaded.holidayExclusions) ? loaded.holidayExclusions : [];
+      loaded.officialHolidayCache = loaded.officialHolidayCache && typeof loaded.officialHolidayCache === 'object' ? loaded.officialHolidayCache : {};
+      loaded.officialHolidayFetchedAt = loaded.officialHolidayFetchedAt && typeof loaded.officialHolidayFetchedAt === 'object' ? loaded.officialHolidayFetchedAt : {};
+      loaded.overrides = loaded.overrides && typeof loaded.overrides === 'object' ? loaded.overrides : {};
+      loaded.hourlyRate = Number(loaded.hourlyRate || 0);
+      loaded.taxRate = Number.isFinite(Number(loaded.taxRate)) ? Number(loaded.taxRate) : 10;
+      data=loaded; saveData(); alert('백업 데이터를 불러왔습니다.');
+    } catch(err) { alert('불러오기 실패: '+err.message); }
+    e.target.value='';
+  });
+
+  // 직원별 약칭은 일지에서만 사용합니다.
+  const SHORT_NAME = {'오세영':'나','조덕진':'진','김재민':'민','조장행':'행'};
+  function shiftRole(value) {
+    if (/^오전[1-5]$/.test(value || '')) return '오전';
+    if (/^오후[1-5]$/.test(value || '')) return '오후';
+    if (/^야간[1-5]$/.test(value || '')) return '야간';
+    // 맞교대 야간도 다음 날 오전 근무자의 전근무자로 취급합니다.
+    if (value === '맞교대 야간') return '야간';
+    return '';
+  }
+  function findShiftPerson(key, role) {
+    return PEOPLE.find(p => shiftRole(effectiveShift(key,p)) === role) || '';
+  }
+  function personalLine(key) {
+    const own = effectiveShift(key,'오세영');
+    const date = new Date(key + 'T00:00:00');
+    const label = String(date.getMonth()+1).padStart(2,'0') + '/' + String(date.getDate()).padStart(2,'0');
+    if (!own) return label + ' 미입력.';
+    if (own === '휴무' || own === '연차') return label + ' ' + own + '.';
+
+    const role = shiftRole(own);
+    if (!role) return label + ' ' + own + '.';
+
+    let before = '', after = '';
+    if (role === '오전') {
+      const prev = new Date(date); prev.setDate(prev.getDate()-1);
+      before = findShiftPerson(dateKey(prev.getFullYear(),prev.getMonth(),prev.getDate()),'야간');
+      after = findShiftPerson(key,'오후');
+    } else if (role === '오후') {
+      before = findShiftPerson(key,'오전');
+      after = findShiftPerson(key,'야간');
+    } else if (role === '야간') {
+      before = findShiftPerson(key,'오후');
+      const next = new Date(date); next.setDate(next.getDate()+1);
+      after = findShiftPerson(dateKey(next.getFullYear(),next.getMonth(),next.getDate()),'오전');
+    }
+    return label + ' ' + (before ? SHORT_NAME[before] + ' ' : '') + own + (after ? ' ' + SHORT_NAME[after] : '') + '.';
+  }
+  function getPersonalJournal() {
+    const days = new Date(viewYear,viewMonth+1,0).getDate();
+    // 날짜마다 한 줄씩 쓰고, 날짜 사이에는 빈 줄을 하나 둡니다.
+    return Array.from({length:days},(_,i)=>personalLine(dateKey(viewYear,viewMonth,i+1))).join('\n\n');
+  }
+  function ownShiftIcon(value) {
+    if (!value || value === '미입력') return '·';
+    if (value === '휴무') return '休';
+    if (value === '연차') return '연';
+    if (value === '맞교대 주간') return '주';
+    if (value === '맞교대 야간') return '야';
+    if (value.startsWith('오전')) return '☀';
+    if (value.startsWith('오후')) return '◐';
+    if (value.startsWith('야간')) return '☾';
+    return '·';
+  }
+  function ownMonthText() {
+    const days = new Date(viewYear,viewMonth+1,0).getDate();
+    const lines = [viewYear+'년 '+(viewMonth+1)+'월 오세영 근무표'];
+    for (let d=1; d<=days; d++) {
+      const key = dateKey(viewYear,viewMonth,d);
+      const value = effectiveShift(key,'오세영') || '미입력';
+      lines.push(String(d).padStart(2,'0')+'일 '+ownShiftIcon(value)+' '+value);
+    }
+    return lines.join('\\n');
+  }
+  function renderPersonalTools() {
+    const journal = document.getElementById('personalJournal');
+    if (!journal) return;
+    journal.textContent = getPersonalJournal();
+
+    const grid = document.getElementById('myShareCalendar');
+    grid.innerHTML = '';
+    const firstDay = new Date(viewYear,viewMonth,1).getDay();
+    for (let i=0;i<firstDay;i++) {
+      const blank = document.createElement('div');
+      blank.className = 'share-day empty';
+      grid.appendChild(blank);
+    }
+    const days = new Date(viewYear,viewMonth+1,0).getDate();
+    for (let d=1;d<=days;d++) {
+      const key = dateKey(viewYear,viewMonth,d);
+      const value = effectiveShift(key,'오세영') || '미입력';
+      const cell = document.createElement('div');
+      cell.className = 'share-day';
+      if (value === '휴무') cell.classList.add('is-off');
+      if (value === '연차') cell.classList.add('is-leave');
+      if (value === '맞교대 주간' || value === '맞교대 야간') cell.classList.add('is-match');
+      if (isHoliday(key)) cell.classList.add('is-holiday');
+      const day = document.createElement('small'); day.textContent = d+'일';
+      const icon = document.createElement('strong'); icon.textContent = ownShiftIcon(value);
+      const shift = document.createElement('span'); shift.className = 'share-shift'; shift.textContent = value;
+      if (isHoliday(key)) { const holiday = document.createElement('span'); holiday.className = 'share-holiday'; holiday.textContent = '공휴일'; cell.append(day,holiday,icon,shift); }
+      else cell.append(day,icon,shift);
+      grid.appendChild(cell);
+    }
+
+    const rate = Number(data.hourlyRate || 0);
+    const tax = Math.min(50,Math.max(0,Number(data.taxRate ?? 10)));
+    const monthlyDays = new Date(viewYear,viewMonth+1,0).getDate();
+    let baseHours=0, holidayHours=0, matchHours=0, workDays=0, matchDayCount=0, matchNightCount=0;
+    for (let d=1;d<=monthlyDays;d++) {
+      const key = dateKey(viewYear,viewMonth,d);
+      const value = effectiveShift(key,'오세영');
+      if (!value || value==='휴무' || value==='연차') continue;
+      workDays++;
+      // 일반 근무와 맞교대의 기본 근로시간은 우선 8시간으로 계산합니다.
+      baseHours += 8;
+      if (value === '맞교대 주간') { matchHours += 3; matchDayCount++; }
+      if (value === '맞교대 야간') { matchHours += 4; matchNightCount++; }
+      if (isHoliday(key)) {
+        // 공휴일은 실제 근무시간 기준: 일반 8시간, 맞교대 주간 11시간, 야간 12시간.
+        holidayHours += value === '맞교대 주간' ? 11 : value === '맞교대 야간' ? 12 : 8;
+      }
+    }
+    const basePay = baseHours * rate;
+    const matchExtra = matchHours * rate * 1.5;
+    const holidayExtra = holidayHours * rate * 1.5;
+    const extraPay = matchExtra + holidayExtra;
+    const gross = basePay + extraPay;
+    const net = gross * (1-tax/100);
+    const money = n => Math.round(n).toLocaleString('ko-KR')+'원';
+    document.getElementById('payResults').innerHTML =
+      '<div class="pay-result"><small>기본급 예상 · '+baseHours+'시간</small><strong>'+money(basePay)+'</strong></div>'+
+      '<div class="pay-result"><small>추가수당 예상</small><strong>'+money(extraPay)+'</strong></div>'+
+      '<div class="pay-result"><small>세전 합계</small><strong>'+money(gross)+'</strong></div>'+
+      '<div class="pay-result"><small>세후 예상 · 공제 '+tax+'%</small><strong>'+money(net)+'</strong></div>'+
+      '<div class="pay-result"><small>맞교대 수당 · 주간 '+matchDayCount+'회 / 야간 '+matchNightCount+'회</small><strong>'+money(matchExtra)+'</strong></div>'+
+      '<div class="pay-result"><small>공휴일 근무 · '+holidayHours+'시간</small><strong>'+money(holidayExtra)+'</strong></div>'+
+      '<div class="pay-result"><small>근무일수</small><strong>'+workDays+'일</strong></div>'+
+      '<div class="pay-result"><small>적용 시급</small><strong>'+money(rate)+'</strong></div>';
+
+    document.getElementById('hourlyRate').value = data.hourlyRate || '';
+    document.getElementById('taxRate').value = tax;
+    const monthPrefix = viewYear+'-'+String(viewMonth+1).padStart(2,'0');
+    const official = Object.entries(officialHolidayMap(viewYear))
+      .filter(([k])=>k.startsWith(monthPrefix) && !data.holidayExclusions.includes(k))
+      .sort(([a],[b])=>a.localeCompare(b));
+    const custom = data.holidayDates.filter(k=>k.startsWith(monthPrefix) && !Object.prototype.hasOwnProperty.call(officialHolidayMap(viewYear),k)).sort();
+    const excluded = data.holidayExclusions.filter(k=>k.startsWith(monthPrefix)).sort();
+    const parts = [];
+    if (official.length) parts.push('자동 공휴일: '+official.map(([k,name])=>Number(k.slice(-2))+'일 '+name).join(', '));
+    if (custom.length) parts.push('직접 추가: '+custom.map(k=>Number(k.slice(-2))+'일').join(', '));
+    if (excluded.length) parts.push('제외: '+excluded.map(k=>Number(k.slice(-2))+'일').join(', '));
+    document.getElementById('holidayList').textContent = parts.length ? parts.join(' · ') : '이번 달 공휴일 없음';
+  }
+  document.getElementById('hourlyRate').addEventListener('change',e=>{
+    data.hourlyRate = Math.max(0,Number(e.target.value||0));
+    localStorage.setItem(KEY,JSON.stringify(data));
+    renderPersonalTools();
+  });
+  document.getElementById('taxRate').addEventListener('change',e=>{
+    data.taxRate = Math.min(50,Math.max(0,Number(e.target.value||0)));
+    localStorage.setItem(KEY,JSON.stringify(data));
+    renderPersonalTools();
+  });
+  document.getElementById('addHoliday').addEventListener('click',async()=>{
+    const key=document.getElementById('holidayDate').value;
+    if(!key){alert('공휴일 날짜를 선택해주세요.');return;}
+    await loadOfficialHolidays(Number(key.slice(0,4)));
+    data.holidayExclusions = data.holidayExclusions.filter(x=>x!==key);
+    if(!Object.prototype.hasOwnProperty.call(officialHolidayMap(Number(key.slice(0,4))),key) && !data.holidayDates.includes(key)) {
+      data.holidayDates.push(key);
+    }
+    localStorage.setItem(KEY,JSON.stringify(data));
+    renderPersonalTools();
+  });
+  document.getElementById('removeHoliday').addEventListener('click',async()=>{
+    const key=document.getElementById('holidayDate').value;
+    if(!key){alert('공휴일 날짜를 선택해주세요.');return;}
+    await loadOfficialHolidays(Number(key.slice(0,4)));
+    data.holidayDates=data.holidayDates.filter(x=>x!==key);
+    if(Object.prototype.hasOwnProperty.call(officialHolidayMap(Number(key.slice(0,4))),key) && !data.holidayExclusions.includes(key)) {
+      data.holidayExclusions.push(key);
+    }
+    localStorage.setItem(KEY,JSON.stringify(data));
+    renderPersonalTools();
+  });
+  document.getElementById('copyJournal').addEventListener('click',async()=>{
+    try { await navigator.clipboard.writeText(getPersonalJournal()); alert('근무일지를 복사했습니다.'); }
+    catch(e) { alert('복사 권한이 없습니다. TXT 저장을 이용해주세요.'); }
+  });
+  document.getElementById('downloadJournal').addEventListener('click',()=>{
+    const blob=new Blob(['\\ufeff'+getPersonalJournal()],{type:'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='오세영_근무일지_'+viewYear+'_'+String(viewMonth+1).padStart(2,'0')+'.txt'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+  // 화면의 7칸 달력과 색상을 반영해 고해상도 PNG 파일을 만듭니다.
+  function createSharePng() {
+    const days = new Date(viewYear,viewMonth+1,0).getDate();
+    const firstDay = new Date(viewYear,viewMonth,1).getDay();
+    const weeks = Math.ceil((firstDay + days) / 7);
+    const width = 1400, padding = 36, titleHeight = 112, weekdayHeight = 54;
+    const cellGap = 10, cellHeight = 142;
+    const cellWidth = (width - padding*2 - cellGap*6) / 7;
+    const calendarTop = titleHeight + weekdayHeight;
+    const height = calendarTop + weeks*cellHeight + padding;
+    const scale = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = width*scale;
+    canvas.height = height*scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale,scale);
+
+    // 밝은 회청색 바탕과 흰색 카드로 공유 이미지 가독성을 높입니다.
+    ctx.fillStyle = '#edf2f8';
+    ctx.fillRect(0,0,width,height);
+    ctx.fillStyle = '#1d2a3e';
+    ctx.font = "700 38px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
+    ctx.textAlign = 'left';
+    ctx.fillText(viewYear+'년 '+(viewMonth+1)+'월 근무표',padding,55);
+    ctx.fillStyle = '#65758b';
+    ctx.font = "500 18px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
+    ctx.fillText('오세영 개인 근무표',padding,86);
+
+    const weekdays = ['일','월','화','수','목','금','토'];
+    ctx.textAlign = 'center';
+    ctx.font = "700 20px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
+    weekdays.forEach((day,i) => {
+      const x = padding + i*(cellWidth+cellGap) + cellWidth/2;
+      ctx.fillStyle = i===0 ? '#d85e78' : '#607089';
+      ctx.fillText(day,x,titleHeight+31);
+    });
+
+    function roundedRect(x,y,w,h,r,fill,stroke) {
+      ctx.beginPath();
+      ctx.roundRect(x,y,w,h,r);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = stroke;
+      ctx.stroke();
+    }
+
+    for (let d=1; d<=days; d++) {
+      const index = firstDay+d-1;
+      const col = index%7, row = Math.floor(index/7);
+      const x = padding + col*(cellWidth+cellGap);
+      const y = calendarTop + row*cellHeight;
+      const key = dateKey(viewYear,viewMonth,d);
+      const value = effectiveShift(key,'오세영') || '미입력';
+      const holiday = isHoliday(key);
+      let fill=holiday?'#fff0f1':'#ffffff', border=holiday?'#e65b70':'#d5deea', main=holiday?'#a52d45':'#24344a', icon='#24344a', label='#45566d';
+      if (value==='휴무') { fill='#ffe9ed'; border='#efa0b0'; main='#9f304b'; icon='#d85c78'; label='#a43a54'; }
+      else if (value==='연차') { fill='#ffdae3'; border='#e86a87'; main='#8f2340'; icon='#b92f54'; label='#8f2340'; }
+      else if (value==='맞교대 주간' || value==='맞교대 야간') { fill='#f0eaff'; border='#b9a0ed'; label='#7053a8'; icon='#7053a8'; }
+      else if (value.startsWith('오전')) { icon='#a87900'; }
+      else if (value.startsWith('오후')) { icon='#2674b8'; }
+      else if (value.startsWith('야간')) { icon='#7854b4'; }
+
+      roundedRect(x,y,cellWidth,cellHeight,12,fill,border);
+      if (holiday) {
+        // 공휴일은 날짜 아래에 눈에 띄는 빨간 표시를 추가합니다.
+        ctx.fillStyle='#c83f57';
+        ctx.beginPath(); ctx.roundRect(x+cellWidth/2-42,y+43,84,23,8); ctx.fill();
+        ctx.fillStyle='#ffffff'; ctx.font="800 13px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
+        ctx.textAlign='center'; ctx.fillText('공휴일',x+cellWidth/2,y+60);
+      }
+      ctx.textAlign='center';
+      ctx.fillStyle=main;
+      ctx.font="700 20px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
+      ctx.fillText(d+'일',x+cellWidth/2,y+32);
+      ctx.fillStyle=icon;
+      ctx.font="700 43px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
+      ctx.fillText(ownShiftIcon(value),x+cellWidth/2,y+86);
+      ctx.fillStyle=label;
+      ctx.font="700 17px -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif";
+      ctx.fillText(value,x+cellWidth/2,y+119);
+    }
+    return new Promise((resolve,reject) => {
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG 이미지 생성에 실패했습니다.')),'image/png');
+    });
+  }
+
+  document.getElementById('shareMyMonth').addEventListener('click',async()=>{
+    const button = document.getElementById('shareMyMonth');
+    const title = viewYear+'년 '+(viewMonth+1)+'월 오세영 근무표';
+    button.disabled = true;
+    button.textContent = '이미지 만드는 중…';
+    try {
+      const blob = await createSharePng();
+      const file = new File([blob], '오세영_근무표_'+viewYear+'_'+String(viewMonth+1).padStart(2,'0')+'.png', {type:'image/png'});
+      if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
+        await navigator.share({title,files:[file]});
+      } else {
+        // 이미지 파일 공유를 지원하지 않는 환경에서는 PNG를 기기에 저장합니다.
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        alert('PNG 이미지로 저장했습니다. 사진 또는 파일에서 카카오톡으로 공유하실 수 있습니다.');
+      }
+    } catch(e) {
+      if (e.name !== 'AbortError') alert('이미지 공유에 실패했습니다: '+e.message);
+    } finally {
+      button.disabled = false;
+      button.textContent = '이미지 공유';
+    }
+  });
+
+  render();
+</script>
+</body>
+</html>
