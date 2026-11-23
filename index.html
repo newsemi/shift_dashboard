@@ -67,6 +67,31 @@
   dialog .dialog-info { color:var(--muted); font-size:13px; margin-bottom:12px; }
   dialog select { width:100%; padding:12px; font-size:16px; }
   dialog .dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  /* 상단 메뉴는 스크롤 중에도 화면 위에 고정합니다. */
+  .top-nav { position:sticky; top:0; z-index:20; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; padding:8px 0; margin:0 0 14px; background:rgba(11,16,32,.96); backdrop-filter:blur(12px); }
+  .top-nav button { padding:10px 4px; font-size:13px; border-radius:10px; color:var(--muted); }
+  .top-nav button.active { color:#fff; background:#315a9f; border-color:#5b8de0; font-weight:800; }
+  .page-section { display:none; } .page-section.active { display:block; }
+  .home-date { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+  .home-date strong { font-size:clamp(25px,6vw,38px); letter-spacing:-1.2px; }
+  .home-date .weekday { color:#f5d76e; font-size:20px; font-weight:800; }
+  .home-hero { background:linear-gradient(135deg,#1b2c49,#253c62); border:1px solid #45638f; border-radius:16px; padding:17px; margin-bottom:12px; }
+  .home-hero small { color:#b8c9e6; } .home-hero strong { display:block; font-size:clamp(25px,6vw,34px); margin:5px 0; }
+  .handover-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:12px 0; }
+  .handover-card { background:#10192b; border:1px solid var(--line); border-radius:12px; padding:12px 8px; min-width:0; text-align:center; }
+  .handover-card small { display:block; color:var(--muted); font-size:11px; margin-bottom:7px; }
+  .handover-card strong { display:block; font-size:15px; overflow-wrap:anywhere; }
+  .handover-card em { display:block; font-style:normal; color:var(--muted); font-size:11px; margin-top:5px; }
+  .handover-card.me { border-color:#5b8de0; background:#1a2c49; }
+  .home-week { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; }
+  .home-week-day { background:#10192b; border:1px solid var(--line); border-radius:9px; padding:8px 2px; text-align:center; min-width:0; }
+  .home-week-day.today { border:2px solid #78a7ff; background:#1c3152; }
+  .home-week-day small { display:block; color:var(--muted); font-size:10px; }
+  .home-week-day b { display:block; font-size:14px; margin:4px 0; }
+  .home-week-day span { display:block; font-size:10px; overflow-wrap:anywhere; }
+  .home-shortcuts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:12px; }
+  .home-shortcuts button { padding:12px; text-align:left; }
+  @media(max-width:420px) { .top-nav button { font-size:11px; padding:9px 1px; } .handover-card { padding:10px 4px; } .handover-card strong { font-size:13px; } .home-week-day { padding:7px 1px; } .home-week-day span { font-size:9px; } }
   .footer { text-align:center; color:#71809b; font-size:11px; padding:8px 0 24px; }
 
   .personal-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
@@ -126,9 +151,22 @@
     </div>
   </header>
 
-  <section class="summary" id="summary"></section>
+  <nav class="top-nav" aria-label="주요 메뉴">
+    <button type="button" class="active" data-page="home">홈</button><button type="button" data-page="schedule">근무표</button><button type="button" data-page="journal">내 일지</button><button type="button" data-page="pay">급여</button><button type="button" data-page="manage">관리</button>
+  </nav>
+  <section id="homePage" class="page-section active">
+    <div class="panel">
+      <div class="home-date"><div><div class="sub" id="homeDateLabel"></div><strong id="homeDateNumber"></strong></div><div class="weekday" id="homeWeekday"></div></div>
+      <div class="home-hero"><small>오늘 내 근무</small><strong id="homeOwnShift">불러오는 중…</strong><div class="sub" id="homeShiftTime"></div></div>
+      <h2>근무 인수인계</h2><div class="handover-grid" id="homeHandover"></div>
+      <div class="panel-head"><h2>이번 주 근무 흐름</h2><button type="button" id="homeOpenSchedule">월간 근무표 보기</button></div>
+      <div class="home-week" id="homeWeek"></div>
+      <div class="home-shortcuts"><button type="button" data-open-page="journal">내 근무일지 보기 →</button><button type="button" data-open-page="pay">이번 달 급여 확인 →</button></div>
+    </div>
+  </section>
+  <section class="summary page-section" id="summary" data-page="schedule"></section>
 
-  <section class="panel">
+  <section class="panel page-section" data-page="schedule">
     <div class="panel-head">
       <h2>날짜별 근무표</h2>
       <div class="legend">
@@ -149,7 +187,7 @@
   </section>
 
 
-  <section class="personal-grid">
+  <section class="personal-grid page-section" data-page="journal">
     <div class="panel">
       <div class="panel-head">
         <h2>내 근무일지 · 오세영</h2>
@@ -172,7 +210,7 @@
     </div>
   </section>
 
-  <section class="panel">
+  <section class="panel page-section" data-page="pay">
     <div class="panel-head">
       <h2>급여 예상 · 오세영</h2>
       <span class="hint">선택한 달 1일~말일 근무분 · 다음 달 10일 지급</span>
@@ -193,7 +231,7 @@
     <p class="hint">기본급과 고정 시간외수당은 고정급으로 합산합니다. 일반 맞교대는 주간·야간 추가시간에 1.5배를 적용하고, 공휴일 근무는 일반 맞교대 추가시간을 중복하지 않고 공휴일 인정시간 전체에 1.5배를 적용합니다. 공휴일 주간 맞교대는 우선 11시간으로 설정했습니다. 별도 추가 연장시간은 매월 직접 입력하세요. 공제율 기본값은 2026년 10월 급여명세서의 실제 공제율 16.43%를 반영한 16.5%입니다. 월별 지급액에 따라 실제 공제율은 달라질 수 있습니다.</p>
     </section>
 
-    <div class="form-row">
+    <div class="form-row page-section" data-page="pay">
       <div class="field">
         <label for="holidayDate">    <div class="form-row">
       <div class="field">
@@ -203,12 +241,12 @@
       <button id="addHoliday">추가 / 복원</button>
       <button id="removeHoliday">제외</button>
     </div>
-    <div id="holidayList" class="holiday-list"></div>
-    <div class="pay-grid" id="payResults"></div>
-    <p class="hint">초기 계산 기준: 일반 근무 기본 8시간, 맞교대도 기본 8시간으로 계산하고 주간 3시간·야간 4시간을 별도 1.5배 수당으로 더합니다. 공휴일은 자동 적용되며, 날짜를 직접 추가하거나 제외할 수 있습니다. 공휴일 수당은 지정된 근무시간 기준 참고치입니다. 세후는 입력한 공제율로 계산한 참고치입니다. 실제 급여명세서와 회사의 수당 중복 규정에 따라 달라질 수 있습니다.</p>
+    <div id="holidayList" class="holiday-list page-section" data-page="pay"></div>
+    <div class="pay-grid page-section" id="payResults" data-page="pay"></div>
+    <p class="hint page-section" data-page="pay">초기 계산 기준: 일반 근무 기본 8시간, 맞교대도 기본 8시간으로 계산하고 주간 3시간·야간 4시간을 별도 1.5배 수당으로 더합니다. 공휴일은 자동 적용되며, 날짜를 직접 추가하거나 제외할 수 있습니다. 공휴일 수당은 지정된 근무시간 기준 참고치입니다. 세후는 입력한 공제율로 계산한 참고치입니다. 실제 급여명세서와 회사의 수당 중복 규정에 따라 달라질 수 있습니다.</p>
   </section>
 
-  <section class="tools">
+  <section class="tools page-section" data-page="manage">
     <div class="panel">
       <div class="panel-head"><h2>데이터 관리</h2></div>
       <div class="form-row">
@@ -450,6 +488,44 @@
     }
     return baseShift(key,person);
   }
+  // 홈 화면은 오늘 날짜를 기준으로 표시하고, 일지와 동일한 인수인계 계산을 사용합니다.
+  function renderHome() {
+    const now=new Date(), y=now.getFullYear(), m=now.getMonth(), d=now.getDate(), key=dateKey(y,m,d);
+    const weekdays=['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+    const shortDays=['일','월','화','수','목','금','토'];
+    const own=effectiveShift(key,'오세영')||'미입력';
+    document.getElementById('homeDateLabel').textContent=y+'년 '+(m+1)+'월';
+    document.getElementById('homeDateNumber').textContent=d+'일';
+    document.getElementById('homeWeekday').textContent=weekdays[now.getDay()];
+    document.getElementById('homeOwnShift').textContent=own==='미입력'?own:own+' '+ownShiftIcon(own);
+    const times={'오전':'06:15 ~ 14:15','오후':'14:15 ~ 22:15','야간':'22:15 ~ 06:15','맞교대 주간':'06:15 ~ 18:15','맞교대 야간':'18:00 ~ 06:00'};
+    const role=own.startsWith('오전')?'오전':own.startsWith('오후')?'오후':own.startsWith('야간')?'야간':own;
+    document.getElementById('homeShiftTime').textContent=times[role]||(own==='휴무'?'오늘은 휴무입니다.':own==='연차'?'오늘은 연차입니다.':'근무 시간이 등록되지 않았습니다.');
+    const line=personalLine(key).replace(/^\d{2}\/\d{2}\s*/,'').replace(/\s*풍쇄는\.$/,'');
+    let before='',after='';
+    if(own!=='휴무'&&own!=='연차'&&own!=='미입력'){const parts=line.replace(own,'|OWN|').split('|OWN|');before=(parts[0]||'').trim();after=(parts[1]||'').trim();}
+    const box=document.getElementById('homeHandover');box.innerHTML='';
+    [{label:'앞근무자',name:before,detail:'내 근무 직전'},{label:'내 근무',name:'오세영',detail:own},{label:'뒷근무자',name:after,detail:'내 근무 다음'}].forEach((item,i)=>{
+      const card=document.createElement('div');card.className='handover-card'+(i===1?' me':'');
+      const a=document.createElement('small');a.textContent=item.label;const b=document.createElement('strong');b.textContent=item.name||(i===1?'오세영':'확인 불가');
+      const c=document.createElement('em');c.textContent=item.detail;card.append(a,b,c);box.appendChild(card);
+    });
+    const week=document.getElementById('homeWeek');week.innerHTML='';
+    const start=new Date(y,m,d);start.setDate(d-start.getDay());
+    for(let i=0;i<7;i++){const day=new Date(start);day.setDate(start.getDate()+i);const k=dateKey(day.getFullYear(),day.getMonth(),day.getDate());const value=effectiveShift(k,'오세영')||'미입력';
+      const cell=document.createElement('div');cell.className='home-week-day'+(k===key?' today':'');
+      const a=document.createElement('small');a.textContent=shortDays[day.getDay()];const b=document.createElement('b');b.textContent=day.getDate();const c=document.createElement('span');c.textContent=value.replace(/[1-5]$/,'');cell.append(a,b,c);week.appendChild(cell);}
+  }
+  function showPage(page) {
+    document.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
+    document.querySelectorAll('.top-nav button[data-page]').forEach(btn=>btn.classList.toggle('active',btn.dataset.page===page));
+    if(page==='home')renderHome();
+    window.scrollTo({top:0,behavior:'instant'});
+  }
+  document.querySelectorAll('.top-nav button[data-page]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.page)));
+  document.querySelectorAll('[data-open-page]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.openPage)));
+  document.getElementById('homeOpenSchedule').addEventListener('click',()=>showPage('schedule'));
+
   function render() {
     // 해당 연도의 공휴일 목록을 자동으로 불러옵니다.
     loadOfficialHolidays(viewYear);
@@ -484,6 +560,7 @@
     }
     renderSummary(days);
     renderPersonalTools();
+    renderHome();
   }
   function renderSummary(days) {
     const key = dateKey(viewYear,viewMonth,1);
