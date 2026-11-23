@@ -595,6 +595,7 @@
       homeWeekEl.style.transition='none';
       homeWeekEl.style.transform='translateX('+(direction*width)+'px)';
       requestAnimationFrame(()=>{
+        homeWeekEl.style.transition='transform .22s cubic-bezier(.2,.75,.25,1)';
         requestAnimationFrame(()=>{
           homeWeekEl.classList.add('is-settling');
           homeWeekEl.style.transform='translateX(0)';
