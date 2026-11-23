@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-title" content="근무현황판">
+<meta name="format-detection" content="telephone=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>근무현황판 v1.99</title>
@@ -71,7 +73,22 @@
   .top-nav { position:sticky; top:0; z-index:20; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; padding:8px 0; margin:0 0 14px; background:rgba(11,16,32,.96); backdrop-filter:blur(12px); }
   .top-nav button { padding:10px 4px; font-size:13px; border-radius:10px; color:var(--muted); }
   .top-nav button.active { color:#fff; background:#315a9f; border-color:#5b8de0; font-weight:800; }
-  .page-section { display:none; } .page-section.active { display:block; }
+  .page-section { display:none !important; } .page-section.active { display:block !important; }
+  .summary.page-section.active, .personal-grid.page-section.active, .tools.page-section.active { display:grid !important; }
+  .pay-grid.page-section.active { display:grid !important; }
+  /* 홈에서 오늘 날짜와 근무 흐름이 먼저 보이도록 강조합니다. */
+  .home-date { background:linear-gradient(135deg,#1c3152,#172238); border:1px solid #456ba7; border-radius:13px; padding:14px 16px; }
+  .home-date strong { display:block; font-size:clamp(27px,7vw,38px); letter-spacing:-1px; margin-top:3px; }
+  .home-date .weekday { font-size:clamp(20px,5vw,27px); font-weight:900; color:#9fc4ff; }
+  .home-hero { border:1px solid #5b8de0; box-shadow:0 0 0 2px rgba(91,141,224,.12),0 8px 22px rgba(0,0,0,.18); }
+  .home-week-day.first { background:#594b1d; border-color:#8b7530; color:var(--first); }
+  .home-week-day.second { background:#183f5c; border-color:#3476a5; color:var(--second); }
+  .home-week-day.third { background:#402b62; border-color:#7652a5; color:var(--third); }
+  .home-week-day.off { background:#30394b; border-color:#56647d; color:#d0d8e5; }
+  .home-week-day.leave { background:#592b40; border-color:#a64e70; color:#ffabc5; }
+  .home-week-day.unknown { border-style:dashed; color:#8c9bb5; }
+  .home-week-day.today { outline:2px solid #78a7ff; outline-offset:2px; }
+  .home-week-day span { font-weight:800; }
   .home-date { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
   .home-date strong { font-size:clamp(25px,6vw,38px); letter-spacing:-1.2px; }
   .home-date .weekday { color:#f5d76e; font-size:20px; font-weight:800; }
@@ -144,7 +161,7 @@
       <h1>근무현황판</h1>
       <div class="sub">개인 근무 확인 · 동료 근무 확인 · 연차 기록</div>
     </div>
-    <div class="month">
+    <div class="month" id="monthControls">
       <button id="prevMonth" aria-label="이전 달">‹</button>
       <strong id="monthTitle">2026년 11월</strong>
       <button id="nextMonth" aria-label="다음 달">›</button>
@@ -513,12 +530,15 @@
     const week=document.getElementById('homeWeek');week.innerHTML='';
     const start=new Date(y,m,d);start.setDate(d-start.getDay());
     for(let i=0;i<7;i++){const day=new Date(start);day.setDate(start.getDate()+i);const k=dateKey(day.getFullYear(),day.getMonth(),day.getDate());const value=effectiveShift(k,'오세영')||'미입력';
-      const cell=document.createElement('div');cell.className='home-week-day'+(k===key?' today':'');
-      const a=document.createElement('small');a.textContent=shortDays[day.getDay()];const b=document.createElement('b');b.textContent=day.getDate();const c=document.createElement('span');c.textContent=value.replace(/[1-5]$/,'');cell.append(a,b,c);week.appendChild(cell);}
+      const cell=document.createElement('div');cell.className='home-week-day '+shiftClass(value)+(k===key?' today':'');
+      const a=document.createElement('small');a.textContent=shortDays[day.getDay()];const b=document.createElement('b');b.textContent=day.getDate();const c=document.createElement('span');c.textContent=(value==='미입력'?'미입력':value.replace(/[1-5]$/,''));cell.append(a,b,c);week.appendChild(cell);}
   }
   function showPage(page) {
     document.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
     document.querySelectorAll('.top-nav button[data-page]').forEach(btn=>btn.classList.toggle('active',btn.dataset.page===page));
+    // 홈과 관리 화면에는 월 선택을 숨기고, 월별 자료를 보는 메뉴에서만 표시합니다.
+    document.getElementById('monthControls').style.display =
+      ['schedule','journal','pay'].includes(page) ? 'flex' : 'none';
     if(page==='home')renderHome();
     window.scrollTo({top:0,behavior:'instant'});
   }
