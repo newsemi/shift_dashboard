@@ -190,7 +190,7 @@
       <div class="field"><label for="overtimeMultiplier">추가수당 배율</label><input id="overtimeMultiplier" type="number" min="1" max="3" step="0.1" inputmode="decimal"></div>
       <div class="field"><label for="taxRate">예상 공제율 (%)</label><input id="taxRate" type="number" min="0" max="50" step="0.5" inputmode="decimal"></div>
     </div>
-    <p class="hint">기본급과 고정 시간외수당은 고정급으로 합산합니다. 일반 맞교대는 주간·야간 추가시간에 1.5배를 적용하고, 공휴일 근무는 일반 맞교대 추가시간을 중복하지 않고 공휴일 인정시간 전체에 1.5배를 적용합니다. 공휴일 주간 맞교대는 우선 11시간으로 설정했습니다. 별도 추가 연장시간은 매월 직접 입력하세요. 공제율은 급여명세서 분석 전까지 임시 참고값입니다.</p>
+    <p class="hint">기본급과 고정 시간외수당은 고정급으로 합산합니다. 일반 맞교대는 주간·야간 추가시간에 1.5배를 적용하고, 공휴일 근무는 일반 맞교대 추가시간을 중복하지 않고 공휴일 인정시간 전체에 1.5배를 적용합니다. 공휴일 주간 맞교대는 우선 11시간으로 설정했습니다. 별도 추가 연장시간은 매월 직접 입력하세요. 공제율 기본값은 2026년 10월 급여명세서의 실제 공제율 16.43%를 반영한 16.5%입니다. 월별 지급액에 따라 실제 공제율은 달라질 수 있습니다.</p>
     </section>
 
     <div class="form-row">
@@ -370,12 +370,14 @@
         saved.holidayDayHours = Number.isFinite(Number(saved.holidayDayHours)) ? Number(saved.holidayDayHours) : 11;
         saved.holidayNightHours = Number.isFinite(Number(saved.holidayNightHours)) ? Number(saved.holidayNightHours) : 12;
         saved.overtimeMultiplier = Number.isFinite(Number(saved.overtimeMultiplier)) ? Number(saved.overtimeMultiplier) : 1.5;
-        saved.taxRate = Number.isFinite(Number(saved.taxRate)) ? Number(saved.taxRate) : 10;
+        saved.taxRate = Number.isFinite(Number(saved.taxRate)) ? Number(saved.taxRate) : 16.5;
+        // 기존 기본값 10%를 사용 중인 저장 데이터도 새 급여명세서 기준으로 갱신합니다.
+        if (saved.taxRate === 10) saved.taxRate = 16.5;
         return saved;
       }
     } catch (e) { console.warn('저장 데이터 읽기 실패', e); }
     // 최초 실행에는 알려주신 급여명세서의 고정급과 시급을 기본 적용합니다.
-    return {schedule:structuredClone(INITIAL), leaves:{}, overrides:{}, holidayDates:[], holidayExclusions:[], officialHolidayCache:{}, officialHolidayFetchedAt:{}, baseSalary:2172000, fixedOvertimePay:728000, hourlyRate:11549, extraOvertimeHours:0, matchDayHours:3, matchNightHours:4, holidayDayHours:11, holidayNightHours:12, overtimeMultiplier:1.5, taxRate:10};
+    return {schedule:structuredClone(INITIAL), leaves:{}, overrides:{}, holidayDates:[], holidayExclusions:[], officialHolidayCache:{}, officialHolidayFetchedAt:{}, baseSalary:2172000, fixedOvertimePay:728000, hourlyRate:11549, extraOvertimeHours:0, matchDayHours:3, matchNightHours:4, holidayDayHours:11, holidayNightHours:12, overtimeMultiplier:1.5, taxRate:16.5};
   }
   function saveData() {
     localStorage.setItem(KEY, JSON.stringify(data));
@@ -825,7 +827,7 @@
     const holidayDayHours = Number(data.holidayDayHours ?? 11);
     const holidayNightHours = Number(data.holidayNightHours ?? 12);
     const multiplier = Number(data.overtimeMultiplier || 1.5);
-    const tax = Math.min(50,Math.max(0,Number(data.taxRate ?? 10)));
+    const tax = Math.min(50,Math.max(0,Number(data.taxRate ?? 16.5)));
     const monthlyDays = new Date(viewYear,viewMonth+1,0).getDate();
     let holidayHours=0, matchHours=0, workDays=0, matchDayCount=0, matchNightCount=0, holidayWorkDays=0;
 
