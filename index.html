@@ -570,7 +570,14 @@
     // 홈과 관리 화면에는 월 선택을 숨기고, 월별 자료를 보는 메뉴에서만 표시합니다.
     document.getElementById('monthControls').style.display =
       ['schedule','journal','pay'].includes(page) ? 'flex' : 'none';
-    if(page==='home')renderHome();
+    if(page==='home'){
+      // 다른 화면으로 이동하는 동안 전환 애니메이션이 중단됐더라도 홈 복귀 시 상태를 초기화합니다.
+      homeWeekEl.classList.remove('is-dragging','is-settling');
+      homeWeekEl.style.transition='';
+      homeWeekEl.style.transform='';
+      homeTouchStartX=null;homeTouchStartY=null;homeDragAxis=null;
+      renderHome();
+    }
     window.scrollTo({top:0,behavior:'instant'});
   }
   document.querySelectorAll('.top-nav button[data-page]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.page)));
