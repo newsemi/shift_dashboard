@@ -764,12 +764,12 @@
   }
   function ownShiftIcon(value) {
     if (!value || value === '미입력') return '·';
-    if (value === '휴무') return '🌴';
+    if (value === '휴무') return '休';
     if (value === '연차') return '연';
     if (value === '맞교대 주간') return '주';
     if (value === '맞교대 야간') return '야';
-    if (value.startsWith('오전')) return '🌅';
-    if (value.startsWith('오후')) return '🌞';
+    if (value.startsWith('오전')) return '☀️';
+    if (value.startsWith('오후')) return '◐';
     if (value.startsWith('야간')) return '🌙';
     return '·';
   }
