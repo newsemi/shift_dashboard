@@ -770,7 +770,7 @@
     if (value === '맞교대 야간') return '야';
     if (value.startsWith('오전')) return '☀️';
     if (value.startsWith('오후')) return '◐';
-    if (value.startsWith('야간')) return '🌙';
+    if (value.startsWith('야간')) return '☾';
     return '·';
   }
   function ownMonthText() {
@@ -1148,31 +1148,16 @@
       else if (value==='연차') { fill='#ffdae3'; border='#e86a87'; main='#8f2340'; icon='#b92f54'; label='#8f2340'; }
       else if (value==='맞교대 주간' || value==='맞교대 야간') { fill='#f0eaff'; border='#b9a0ed'; label='#7053a8'; icon='#7053a8'; }
       else if (value.startsWith('오전')) {
-        // 오전은 선명한 주황 테두리와 안쪽으로 옅어지는 따뜻한 그라데이션을 적용합니다.
-        if (!holiday) {
-          const gradient=ctx.createRadialGradient(x+cellWidth/2,y+cellHeight/2,8,x+cellWidth/2,y+cellHeight/2,cellWidth*0.72);
-          gradient.addColorStop(0,'#fffdf9'); gradient.addColorStop(0.68,'#fce8d2'); gradient.addColorStop(1,'#f6d39b');
-          fill=gradient; border='#d98232'; cardLineWidth=7;
-        }
-        main='#713c16'; icon='#a85b27'; label='#713c16';
+        // 오전은 흰색 카드를 유지하고 해 아이콘만 노란색으로 표시합니다.
+        main='#24344a'; icon='#f2ae16'; label='#45566d';
       }
       else if (value.startsWith('오후')) {
-        // 오후는 한낮의 황금빛을 강조하고 중앙은 밝게 유지합니다.
-        if (!holiday) {
-          const gradient=ctx.createRadialGradient(x+cellWidth/2,y+cellHeight/2,8,x+cellWidth/2,y+cellHeight/2,cellWidth*0.72);
-          gradient.addColorStop(0,'#fffef7'); gradient.addColorStop(0.68,'#fff2bd'); gradient.addColorStop(1,'#f3c84f');
-          fill=gradient; border='#c69a00'; cardLineWidth=7;
-        }
-        main='#654600'; icon='#a87913'; label='#654600';
+        // 오후는 파란색 반원 아이콘으로 구분합니다.
+        main='#24344a'; icon='#2879bd'; label='#45566d';
       }
       else if (value.startsWith('야간')) {
-        // 야간은 차분한 청색 테두리와 옅은 푸른색 그라데이션을 적용합니다.
-        if (!holiday) {
-          const gradient=ctx.createRadialGradient(x+cellWidth/2,y+cellHeight/2,8,x+cellWidth/2,y+cellHeight/2,cellWidth*0.72);
-          gradient.addColorStop(0,'#fbfcff'); gradient.addColorStop(0.68,'#e6edfa'); gradient.addColorStop(1,'#8499c5');
-          fill=gradient; border='#526fa8'; cardLineWidth=7;
-        }
-        main='#172b50'; icon='#384d79'; label='#172b50';
+        // 야간은 보라색 초승달 아이콘으로 구분합니다.
+        main='#24344a'; icon='#8056bd'; label='#45566d';
       }
 
       roundedRect(x,y,cellWidth,cellHeight,12,fill,border,cardLineWidth);
