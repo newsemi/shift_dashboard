@@ -173,6 +173,9 @@
   .share-day.empty { opacity:.25; }
   @media(max-width:680px) {
     .personal-grid { grid-template-columns:1fr; }
+    /* 휴대폰에서는 공유 달력을 먼저, 일지를 아래에 배치합니다. */
+    .share-panel { order:-1; }
+    .journal-panel { order:1; }
     .journal { max-height:42vh; }
     .share-calendar-head { grid-template-columns:minmax(0,1fr) auto; row-gap:8px; }
     .share-calendar-head h2 { grid-column:1; grid-row:1; }
